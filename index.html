@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster - Controle de Fluxo</title>
+    <title>LogMaster - Gestão de Fluxo</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
@@ -47,8 +47,7 @@
                     <input type="text" id="p-category" required>
                 </div>
                 <div class="field">
-                    <label>Foto (URL ou Base64)</label>
-                    <input type="text" id="p-photo" placeholder="Link da imagem">
+                    <label>Foto do Produto</label>
                     <input type="file" id="p-file" accept="image/*" onchange="app.handleImage(this)">
                 </div>
                 <div class="modal-buttons">
@@ -64,28 +63,27 @@
             <h2 id="move-title">Movimentar</h2>
             <form id="form-move">
                 <input type="hidden" id="move-product-id">
-                <div class="field">
-                    <label>Tipo</label>
-                    <select id="move-type" required>
-                        <option value="ENTRADA">Entrada (+)</option>
-                        <option value="SAIDA">Saída (-)</option>
-                    </select>
-                </div>
+                <input type="hidden" id="move-type">
+                
                 <div class="field">
                     <label>Quantidade</label>
                     <input type="number" id="move-qty" min="1" required>
                 </div>
-                <div class="field">
-                    <label>Destino / Setor</label>
-                    <input type="text" id="move-sector" placeholder="Ex: Manutenção, Almoxarifado..." required>
+
+                <div id="extra-fields">
+                    <div class="field">
+                        <label>Destino / Setor</label>
+                        <input type="text" id="move-sector" placeholder="Ex: Manutenção, Obra X...">
+                    </div>
+                    <div class="field">
+                        <label>Colaborador Responsável</label>
+                        <input type="text" id="move-employee" placeholder="Quem está retirando?">
+                    </div>
                 </div>
-                <div class="field">
-                    <label>Colaborador Responsável</label>
-                    <input type="text" id="move-employee" placeholder="Quem está retirando?" required>
-                </div>
+
                 <div class="modal-buttons">
                     <button type="button" class="btn-ghost" onclick="ui.closeModal('move')">Cancelar</button>
-                    <button type="submit" class="btn-primary">Confirmar</button>
+                    <button type="submit" id="btn-confirm-move" class="btn-primary">Confirmar</button>
                 </div>
             </form>
         </div>
