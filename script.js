@@ -7,13 +7,16 @@ const firebaseConfig = {
     appId: "1:541199550434:web:90083885daa8a9756fdbbb"
 };
 
+// --- CONFIGURAÇÃO EMAILJS ---
+emailjs.init("SUA_PUBLIC_KEY_EMAILJS"); // Substitua pela sua chave do EmailJS
+
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 let currentPhotoBase64 = "";
 let myChart = null;
 
 const app = {
-    // Compressor de Imagem
+    // 1. COMPRESSOR DE IMAGENS
     handleImage(input) {
         const file = input.files[0];
         if (!file) return;
@@ -28,13 +31,11 @@ const app = {
                 const canvas = document.createElement('canvas');
                 const MAX_WIDTH = 400; 
                 const scale = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scale;
+                canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.5);
-                btn.disabled = false;
-                btn.innerText = "Salvar";
+                btn.disabled = false; btn.innerText = "Salvar";
             };
             img.src = e.target.result;
         };
@@ -49,22 +50,27 @@ const app = {
         });
     },
 
+    // 2. RENDERIZAÇÃO E ALERTAS VISUAIS
     renderProducts(items) {
         const tbody = document.getElementById('stock-list');
         tbody.innerHTML = '';
         items.forEach(item => {
+            const isLow = item.qty <= (item.minThreshold || 0);
             tbody.innerHTML += `
-                <tr>
+                <tr class="${isLow ? 'low-stock' : ''}">
                     <td><img src="${item.photo || ''}" class="img-thumb" onerror="this.src='https://via.placeholder.com/50'"></td>
-                    <td><strong>${item.name}</strong></td>
+                    <td>
+                        <strong>${item.name}</strong>
+                        ${isLow ? '<span class="badge-alert">BAIXO</span>' : ''}
+                    </td>
                     <td>${item.category}</td>
-                    <td><h2 style="color:var(--primary)">${item.qty || 0}</h2></td>
+                    <td><h2>${item.qty || 0}</h2></td>
                     <td>
                         <div class="action-group">
                             <button class="btn-in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">📥</button>
                             <button class="btn-out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">📤</button>
-                            <button class="btn-log" onclick="app.showHistory('${item.id}')">📈 Log</button>
-                            <button style="background:none; border:none; cursor:pointer" onclick="app.deleteProduct('${item.id}')">🗑️</button>
+                            <button class="btn-log" onclick="app.showHistory('${item.id}')">📈</button>
+                            <button style="border:none; background:none; cursor:pointer" onclick="app.deleteProduct('${item.id}')">🗑️</button>
                         </div>
                     </td>
                 </tr>
@@ -77,6 +83,7 @@ const app = {
         const data = {
             name: document.getElementById('p-name').value,
             category: document.getElementById('p-category').value,
+            minThreshold: parseInt(document.getElementById('p-min').value),
             photo: currentPhotoBase64,
             qty: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -86,6 +93,7 @@ const app = {
         ui.closeModal('product');
     },
 
+    // 3. LOGICA DE MOVIMENTAÇÃO E DISPARO DE E-MAIL
     async processMove(e) {
         e.preventDefault();
         const pid = document.getElementById('move-product-id').value;
@@ -97,48 +105,61 @@ const app = {
         try {
             const productRef = db.collection('produtos').doc(pid);
             const doc = await productRef.get();
-            const currentQty = doc.data().qty || 0;
-            const newQty = type === 'ENTRADA' ? currentQty + qtyMove : currentQty - qtyMove;
+            const pData = doc.data();
+            const newQty = type === 'ENTRADA' ? (pData.qty + qtyMove) : (pData.qty - qtyMove);
             
             if (newQty < 0) return alert("Saldo insuficiente!");
 
             await productRef.update({ qty: newQty });
             await db.collection('historico').add({
-                productId: pid,
-                type,
-                qty: qtyMove,
-                sector,
-                employee,
+                productId: pid, type, qty: qtyMove, sector, employee,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
+
+            // Alerta de E-mail se atingir estoque baixo
+            if (type === 'SAIDA' && newQty <= (pData.minThreshold || 0)) {
+                this.sendEmailAlert(pData.name, newQty, pData.minThreshold);
+            }
+
             ui.closeModal('move');
         } catch (err) { alert(err.message); }
     },
 
+    sendEmailAlert(name, qty, threshold) {
+        
+        const params = {
+            product_name: name,
+            current_qty: qty,
+            min_threshold: threshold,
+            to_emails: "jefferson@exemplo.com" // Mude para seus e-mails
+        };
+
+        emailjs.send('SEU_SERVICE_ID', 'SEU_TEMPLATE_ID', params)
+            .then(() => console.log('Alerta enviado por e-mail!'))
+            .catch(err => console.error('Falha e-mail:', err));
+    },
+
+    // 4. ESTATISTICAS E GRAFICOS
     async showHistory(pid) {
-        const historyContent = document.getElementById('history-content');
-        historyContent.innerHTML = 'Calculando estatísticas...';
+        const content = document.getElementById('history-content');
+        content.innerHTML = 'Analisando histórico...';
         ui.openModal('history');
 
-        const trintaDiasAtras = new Date();
-        trintaDiasAtras.setDate(trintaDiasAtras.getDate() - 30);
+        const trintaDias = new Date();
+        trintaDias.setDate(trintaDias.getDate() - 30);
 
         try {
-            const snapshot = await db.collection('historico')
+            const snap = await db.collection('historico')
                 .where('productId', '==', pid)
-                .where('timestamp', '>=', trintaDiasAtras)
+                .where('timestamp', '>=', trintaDias)
                 .orderBy('timestamp', 'desc').get();
 
-            const logs = [];
-            snapshot.forEach(doc => logs.push(doc.data()));
+            const logs = []; snap.forEach(doc => logs.push(doc.data()));
 
-            // Médias
-            const calcMedia = (dias) => {
-                const limite = new Date();
-                limite.setDate(limite.getDate() - dias);
-                const total = logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate() >= limite)
-                                  .reduce((s, c) => s + c.qty, 0);
-                return (total / dias).toFixed(1);
+            const calcMedia = (d) => {
+                const limit = new Date(); limit.setDate(limit.getDate() - d);
+                const sum = logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate() >= limit).reduce((s,c)=>s+c.qty, 0);
+                return (sum / d).toFixed(1);
             };
 
             document.getElementById('avg-7').innerText = calcMedia(7);
@@ -147,47 +168,25 @@ const app = {
 
             this.renderChart(logs);
 
-            historyContent.innerHTML = '';
-            logs.forEach(d => {
-                const date = d.timestamp ? d.timestamp.toDate().toLocaleString('pt-BR') : 'Agora';
-                historyContent.innerHTML += `
-                    <div class="log-item">
-                        <span class="${d.type === 'ENTRADA' ? 'badge-in' : 'badge-out'}">${d.type} ${d.qty}un</span>
-                        - ${date} | Setor: ${d.sector} | Resp: ${d.employee}
-                    </div>
-                `;
+            content.innerHTML = '';
+            logs.forEach(l => {
+                const date = l.timestamp ? l.timestamp.toDate().toLocaleString('pt-BR') : 'Agora';
+                content.innerHTML += `<div class="log-item"><span class="${l.type === 'ENTRADA' ? 'badge-in' : 'badge-out'}">${l.type} ${l.qty}un</span> - ${date} | Setor: ${l.sector} | Resp: ${l.employee}</div>`;
             });
-        } catch (err) { historyContent.innerHTML = "Erro: " + err.message; }
+        } catch (err) { content.innerHTML = err.message; }
     },
 
     renderChart(logs) {
         const ctx = document.getElementById('usageChart').getContext('2d');
         if (myChart) myChart.destroy();
-
         const dias = [...Array(7)].map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
+            const d = new Date(); d.setDate(d.getDate() - i);
             return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
         }).reverse();
-
-        const consumo = dias.map(dia => {
-            return logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) === dia)
-                       .reduce((s, c) => s + c.qty, 0);
-        });
-
+        const consumo = dias.map(dia => logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) === dia).reduce((s,c)=>s+c.qty, 0));
         myChart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: dias,
-                datasets: [{
-                    label: 'Saídas Diárias',
-                    data: consumo,
-                    borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245,158,11,0.1)',
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
+            data: { labels: dias, datasets: [{ label: 'Consumo', data: consumo, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.3 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     },
@@ -203,7 +202,7 @@ const ui = {
     openMove(id, name, type) {
         document.getElementById('move-product-id').value = id;
         document.getElementById('move-type').value = type;
-        document.getElementById('move-title').innerText = type === 'ENTRADA' ? `Entrada: ${name}` : `Saída: ${name}`;
+        document.getElementById('move-title').innerText = type === 'ENTRADA' ? `Reposição: ${name}` : `Saída: ${name}`;
         const extra = document.getElementById('extra-fields');
         type === 'ENTRADA' ? extra.classList.add('hidden') : extra.classList.remove('hidden');
         this.openModal('move');
