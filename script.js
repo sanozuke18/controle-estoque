@@ -1,4 +1,4 @@
-// CONFIGURAÇÃO DO SEU FIREBASE
+// CONFIGURAÇÃO DO FIREBASE ( Jefferson, use estas credenciais que você enviou )
 const firebaseConfig = {
     apiKey: "AIzaSyD37ZAe9afx70HjjiGQzxbUkrhtYSqVVms",
     authDomain: "estoque-master-ba8d3.firebaseapp.com",
@@ -8,32 +8,29 @@ const firebaseConfig = {
     appId: "1:541199550434:web:90083885daa8a9756fdbbb"
 };
 
-// Inicialização (Modo Compatibilidade para rodar em qualquer navegador)
+// Inicialização segura
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
-
-// Variável global para armazenar a foto temporariamente antes do upload
 let currentPhotoBase64 = "";
 
 const app = {
-    // 1. PROCESSADOR DE IMAGEM COM COMPRESSÃO
+    // COMPRESSOR DE IMAGENS (Resolve o erro de 1MB do Firebase)
     handleImage(input) {
         const file = input.files[0];
         if (!file) return;
 
-        const btnSave = document.querySelector('#form-product .btn-primary');
-        btnSave.disabled = true;
-        btnSave.innerText = "Processando foto...";
+        const btn = document.getElementById('btn-save-product');
+        btn.disabled = true;
+        btn.innerText = "Processando Foto...";
 
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // Redimensiona para no máximo 400px de largura (ideal para miniaturas)
-                const MAX_WIDTH = 400; 
+                const MAX_WIDTH = 400; // Miniatura otimizada
                 const scaleSize = MAX_WIDTH / img.width;
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
@@ -41,38 +38,28 @@ const app = {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                // Converte para JPG com 50% de qualidade (Leve e rápido)
+                // Qualidade 0.5 para garantir que o arquivo fique minúsculo
                 currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.5);
                 
-                console.log("Foto comprimida e pronta para o banco.");
-                btnSave.disabled = false;
-                btnSave.innerText = "Salvar";
+                btn.disabled = false;
+                btn.innerText = "Salvar Produto";
+                console.log("Imagem pronta.");
             };
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     },
 
-    // 2. INICIALIZAÇÃO E SINCRONIZAÇÃO EM TEMPO REAL
     init() {
-        console.log("LogMaster: Sincronizando com Niterói/Cloud...");
-        
-        // Escuta a coleção de produtos ordenada por nome
+        console.log("Conectando ao banco de dados...");
+        // Escuta os produtos e ordena por nome
         db.collection('produtos').orderBy('name', 'asc').onSnapshot(snapshot => {
             const list = [];
-            snapshot.forEach(doc => {
-                list.push({ id: doc.id, ...doc.data() });
-            });
+            snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
             this.renderProducts(list);
-        }, err => {
-            console.error("Erro no Firebase:", err);
-            if (err.code === 'failed-precondition') {
-                alert("Erro de Índice: Verifique o console (F12) para criar o índice necessário.");
-            }
-        });
+        }, err => console.error("Erro Firebase:", err));
     },
 
-    // 3. RENDERIZAÇÃO DA TABELA
     renderProducts(items) {
         const tbody = document.getElementById('stock-list');
         if (!tbody) return;
@@ -87,10 +74,10 @@ const app = {
                     <td><h2 style="color:#2563eb">${item.qty || 0}</h2></td>
                     <td>
                         <div class="action-group">
-                            <button class="btn-in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">📥 Entrada</button>
-                            <button class="btn-out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">📤 Saída</button>
-                            <button class="btn-log" title="Ver Histórico" onclick="app.showHistory('${item.id}')">📜</button>
-                            <button class="btn-icon" title="Excluir" onclick="app.deleteProduct('${item.id}')" style="color:#ef4444; margin-left:10px">🗑️</button>
+                            <button class="btn-in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">Entrada</button>
+                            <button class="btn-out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">Saída</button>
+                            <button class="btn-log" onclick="app.showHistory('${item.id}')">📜</button>
+                            <button class="btn-delete" onclick="app.deleteProduct('${item.id}')">🗑️</button>
                         </div>
                     </td>
                 </tr>
@@ -98,65 +85,55 @@ const app = {
         });
     },
 
-    // 4. CADASTRO DE NOVO PRODUTO
     async addProduct(e) {
         e.preventDefault();
-        const btnSave = e.submitter;
-        btnSave.disabled = true;
+        const btn = document.getElementById('btn-save-product');
+        btn.disabled = true;
 
         const data = {
             name: document.getElementById('p-name').value.trim(),
             category: document.getElementById('p-category').value.trim(),
-            photo: currentPhotoBase64, // Já comprimida pelo handleImage
+            photo: currentPhotoBase64,
             qty: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
         try {
             await db.collection('produtos').add(data);
-            
-            // LIMPANDO TUDO PARA O PRÓXIMO CADASTRO
             currentPhotoBase64 = ""; 
-            document.getElementById('form-product').reset();
             ui.closeModal('product');
-            alert("Produto cadastrado!");
+            alert("Sucesso: Produto cadastrado!");
         } catch (err) {
-            console.error("Erro ao salvar:", err);
-            alert("Erro: " + err.message);
+            alert("Erro ao cadastrar: " + err.message);
         } finally {
-            btnSave.disabled = false;
+            btn.disabled = false;
         }
     },
 
-    // 5. MOVIMENTAÇÃO DE ESTOQUE (IN/OUT)
     async processMove(e) {
         e.preventDefault();
         const pid = document.getElementById('move-product-id').value;
         const type = document.getElementById('move-type').value;
         const qtyMove = parseInt(document.getElementById('move-qty').value);
         
-        // Se for entrada, preenchemos com valores padrão
         const sector = type === 'ENTRADA' ? "REPOSIÇÃO" : document.getElementById('move-sector').value;
         const employee = type === 'ENTRADA' ? "SISTEMA" : document.getElementById('move-employee').value;
 
         if (type === 'SAIDA' && (!sector || !employee)) {
-            return alert("Para saídas, o Setor e Colaborador são obrigatórios!");
+            return alert("Informe o Setor e o Colaborador para saídas!");
         }
 
         try {
             const productRef = db.collection('produtos').doc(pid);
             const doc = await productRef.get();
             const currentQty = doc.data().qty || 0;
+            const newQty = type === 'ENTRADA' ? currentQty + qtyMove : currentQty - qtyMove;
             
-            let newQty = type === 'ENTRADA' ? currentQty + qtyMove : currentQty - qtyMove;
-            
-            if (newQty < 0) return alert("Saldo insuficiente!");
+            if (newQty < 0) return alert("Erro: Saldo insuficiente!");
 
-            // Atualiza Saldo e Grava Log simultaneamente
             await productRef.update({ qty: newQty });
             await db.collection('historico').add({
                 productId: pid,
-                productName: doc.data().name,
                 type,
                 qty: qtyMove,
                 sector,
@@ -166,108 +143,80 @@ const app = {
 
             ui.closeModal('move');
         } catch (err) {
-            alert("Erro na movimentação: " + err.message);
+            alert("Erro: " + err.message);
         }
     },
 
-    // 6. EXIBIÇÃO DO LOG DE HISTÓRICO
     async showHistory(pid) {
-        const historyContent = document.getElementById('history-content');
-        historyContent.innerHTML = '<p style="padding:20px">Buscando logs...</p>';
+        const content = document.getElementById('history-content');
+        content.innerHTML = 'Buscando logs...';
         ui.openModal('history');
 
         try {
             const logs = await db.collection('historico')
                 .where('productId', '==', pid)
-                .orderBy('timestamp', 'desc')
-                .limit(50) // Mostra as últimas 50 movimentações
-                .get();
+                .orderBy('timestamp', 'desc').get();
 
-            historyContent.innerHTML = '';
+            content.innerHTML = '';
             logs.forEach(doc => {
                 const d = doc.data();
-                const date = d.timestamp ? d.timestamp.toDate().toLocaleString('pt-BR') : 'Processando...';
-                historyContent.innerHTML += `
+                const date = d.timestamp ? d.timestamp.toDate().toLocaleString('pt-BR') : 'Agora';
+                content.innerHTML += `
                     <div class="log-item">
-                        <div class="log-header">
-                            <span class="${d.type === 'ENTRADA' ? 'badge-in' : 'badge-out'}">
-                                ${d.type === 'ENTRADA' ? '📥 ENTRADA' : '📤 SAÍDA'} de ${d.qty} un.
-                            </span>
-                            <small>${date}</small>
-                        </div>
-                        <div style="margin-top:5px; color:#4b5563">
-                            Setor: <strong>${d.sector}</strong> | Responsável: <strong>${d.employee}</strong>
-                        </div>
+                        <strong>${d.type === 'ENTRADA' ? '📥 ENTRADA' : '📤 SAÍDA'} (${d.qty} un)</strong>
+                        <br><small>${date}</small>
+                        <div style="font-size:12px; color: #666">Setor: ${d.sector} | Resp: ${d.employee}</div>
                     </div>
                 `;
             });
-
-            if (logs.empty) {
-                historyContent.innerHTML = '<p style="padding:20px; color:#999">Nenhuma movimentação para este produto.</p>';
-            }
+            if (logs.empty) content.innerHTML = '<p style="padding:20px">Sem histórico.</p>';
         } catch (err) {
-            console.error(err);
-            historyContent.innerHTML = '<p style="padding:20px; color:red">Erro ao carregar histórico: ' + err.message + '</p>';
+            content.innerHTML = 'Erro ao carregar: ' + err.message;
         }
     },
 
-    // 7. EXCLUSÃO
     async deleteProduct(id) {
-        if (confirm("Deseja excluir este produto e todos os seus registros de histórico permanentemente?")) {
-            try {
-                await db.collection('produtos').doc(id).delete();
-                // Opcional: Aqui você poderia deletar os logs também em um loop,
-                // mas para apps simples, deletar o produto já resolve a visualização.
-            } catch (err) {
-                alert("Erro ao excluir: " + err.message);
-            }
+        if (confirm("Excluir este item permanentemente?")) {
+            await db.collection('produtos').doc(id).delete();
         }
     }
 };
 
-// --- FUNÇÕES DE INTERFACE (UI) ---
 const ui = {
-    openModal(id) {
-        const modal = document.getElementById(`modal-${id}`);
-        if (modal) modal.classList.remove('hidden');
+    openModal(id) { 
+        document.getElementById(`modal-${id}`).classList.remove('hidden'); 
     },
-    closeModal(id) {
-        const modal = document.getElementById(`modal-${id}`);
-        if (modal) {
-            modal.classList.add('hidden');
-            const form = modal.querySelector('form');
-            if (form) form.reset();
-        }
+    closeModal(id) { 
+        document.getElementById(`modal-${id}`).classList.add('hidden');
+        const form = document.querySelector(`#modal-${id} form`);
+        if(form) form.reset();
     },
     openMove(id, name, type) {
         document.getElementById('move-product-id').value = id;
         document.getElementById('move-type').value = type;
-        document.getElementById('move-title').innerText = type === 'ENTRADA' ? `Reposição: ${name}` : `Retirada: ${name}`;
+        document.getElementById('move-title').innerText = type === 'ENTRADA' ? `Entrada: ${name}` : `Saída: ${name}`;
         
-        const extraFields = document.getElementById('extra-fields');
+        const extra = document.getElementById('extra-fields');
         const btn = document.getElementById('btn-confirm-move');
 
         if (type === 'ENTRADA') {
-            extraFields.classList.add('hidden');
-            btn.style.background = "#10b981"; // Verde
-            btn.innerText = "Confirmar Entrada";
+            extra.classList.add('hidden');
+            btn.style.background = "#10b981";
         } else {
-            extraFields.classList.remove('hidden');
-            btn.style.background = "#f59e0b"; // Laranja
-            btn.innerText = "Confirmar Saída";
+            extra.classList.remove('hidden');
+            btn.style.background = "#f59e0b";
         }
-        
         this.openModal('move');
     }
 };
 
-// --- LISTENERS DE INICIALIZAÇÃO ---
+// VINCULAÇÃO DOS EVENTOS (Garante que o botão funcione)
 document.addEventListener('DOMContentLoaded', () => {
-    const formProduct = document.getElementById('form-product');
-    const formMove = document.getElementById('form-move');
+    const fProd = document.getElementById('form-product');
+    const fMove = document.getElementById('form-move');
 
-    if (formProduct) formProduct.addEventListener('submit', (e) => app.addProduct(e));
-    if (formMove) formMove.addEventListener('submit', (e) => app.processMove(e));
+    if (fProd) fProd.addEventListener('submit', (e) => app.addProduct(e));
+    if (fMove) fMove.addEventListener('submit', (e) => app.processMove(e));
     
     app.init();
 });

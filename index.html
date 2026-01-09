@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster - Gestão de Fluxo</title>
+    <title>LogMaster - Gestão Niterói</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar">
         <div class="container">
-            <span class="logo">🚚 LogMaster <small>Fluxo de Materiais</small></span>
+            <span class="logo">🚚 LogMaster <small>Controle de Fluxo</small></span>
             <div class="nav-actions">
-                <button class="btn-primary" onclick="ui.openModal('product')">+ Cadastrar Produto</button>
+                <button class="btn-primary" onclick="ui.openModal('product')">+ Novo Produto</button>
             </div>
         </div>
     </nav>
@@ -29,14 +29,15 @@
                         <th>Ações</th>
                     </tr>
                 </thead>
-                <tbody id="stock-list"></tbody>
+                <tbody id="stock-list">
+                    </tbody>
             </table>
         </div>
     </main>
 
     <div id="modal-product" class="modal-overlay hidden">
         <div class="modal-card">
-            <h2>Novo Produto</h2>
+            <h2>Cadastrar Novo Item</h2>
             <form id="form-product">
                 <div class="field">
                     <label>Nome do Produto</label>
@@ -47,12 +48,12 @@
                     <input type="text" id="p-category" required>
                 </div>
                 <div class="field">
-                    <label>Foto do Produto</label>
+                    <label>Foto Ilustrativa</label>
                     <input type="file" id="p-file" accept="image/*" onchange="app.handleImage(this)">
                 </div>
                 <div class="modal-buttons">
                     <button type="button" class="btn-ghost" onclick="ui.closeModal('product')">Cancelar</button>
-                    <button type="submit" class="btn-primary">Salvar</button>
+                    <button type="submit" class="btn-primary" id="btn-save-product">Salvar Produto</button>
                 </div>
             </form>
         </div>
@@ -70,10 +71,10 @@
                     <input type="number" id="move-qty" min="1" required>
                 </div>
 
-                <div id="extra-fields">
+                <div id="extra-fields" class="hidden">
                     <div class="field">
                         <label>Destino / Setor</label>
-                        <input type="text" id="move-sector" placeholder="Ex: Manutenção, Obra X...">
+                        <input type="text" id="move-sector" placeholder="Para onde vai?">
                     </div>
                     <div class="field">
                         <label>Colaborador Responsável</label>
@@ -91,10 +92,10 @@
 
     <div id="modal-history" class="modal-overlay hidden">
         <div class="modal-card large">
-            <h2>Log de Movimentações</h2>
+            <h2>Histórico de Movimentações</h2>
             <div id="history-content" class="history-list"></div>
             <div class="modal-buttons">
-                <button class="btn-ghost" onclick="ui.closeModal('history')">Fechar</button>
+                <button type="button" class="btn-ghost" onclick="ui.closeModal('history')">Fechar</button>
             </div>
         </div>
     </div>
