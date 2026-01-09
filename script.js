@@ -1,15 +1,23 @@
+// ... (mantenha seu firebaseConfig e inicialização do db)
+
+let currentPhotoBase64 = ""; // Variável global para a foto temporária
+
 const app = {
-    // NOVA FUNÇÃO: Redimensiona e comprima a foto antes de salvar
     handleImage(input) {
         const file = input.files[0];
         if (!file) return;
+
+        // Feedback visual: desativa o botão enquanto processa a imagem
+        const btnSave = document.querySelector('#form-product .btn-primary');
+        btnSave.disabled = true;
+        btnSave.innerText = "Processando foto...";
 
         const reader = new FileReader();
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                // Configura o tamanho máximo (ex: 400px de largura)
                 const canvas = document.createElement('canvas');
+                // Redimensionamos para um tamanho padrão de miniatura
                 const MAX_WIDTH = 400; 
                 const scaleSize = MAX_WIDTH / img.width;
                 canvas.width = MAX_WIDTH;
@@ -18,56 +26,54 @@ const app = {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                // Converte para JPG com 60% de qualidade (fica bem leve!)
-                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
-                console.log("Foto comprimida com sucesso!");
+                // Comprimimos para 50% de qualidade para garantir que seja muito leve
+                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.5);
+                
+                console.log("Foto pronta e comprimida.");
+                btnSave.disabled = false;
+                btnSave.innerText = "Salvar";
             };
             img.src = e.target.result;
         };
         reader.readAsDataURL(file);
     },
 
-    init() {
-        console.log("Sistema LogMaster Iniciado...");
-        // Ordenamos por 'name' para evitar erro de índice se o createdAt demorar
-        db.collection('produtos').orderBy('name').onSnapshot(snapshot => {
-            const list = [];
-            snapshot.forEach(doc => list.push({id: doc.id, ...doc.data()}));
-            this.renderProducts(list);
-        }, err => {
-            console.error("Erro no Firebase:", err);
-            if(err.message.includes("index")) {
-                alert("O Firebase está criando um índice. Aguarde 1 minuto.");
-            }
-        });
-    },
-
-    // ... restante das funções (renderProducts, processMove, etc) continuam iguais
-    
     async addProduct(e) {
         e.preventDefault();
         
-        // Validação extra de segurança
-        if (currentPhotoBase64.length > 800000) {
-            return alert("A foto ainda está muito grande. Tente outra imagem.");
-        }
+        const btnSave = e.submitter; // Pega o botão que disparou o envio
+        btnSave.disabled = true;
+        btnSave.innerText = "Cadastrando...";
 
         const data = {
             name: document.getElementById('p-name').value,
             category: document.getElementById('p-category').value,
-            photo: currentPhotoBase64 || "",
+            photo: currentPhotoBase64 || "", // Se não tiver foto, salva vazio
             qty: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
         try {
+            // O Firestore gera um ID ÚNICO automaticamente aqui (.add)
+            // Isso impede qualquer conflito de duplicidade
             await db.collection('produtos').add(data);
+            
+            // --- LIMPEZA CRUCIAL ---
+            currentPhotoBase64 = ""; // Limpa a variável global
+            document.getElementById('p-file').value = ""; // Limpa o campo de arquivo
             ui.closeModal('product');
-            currentPhotoBase64 = "";
-            alert("Produto cadastrado!");
+            
+            alert("Produto cadastrado com sucesso!");
         } catch (err) {
-            console.error("Erro ao salvar:", err);
-            alert("Erro: " + err.message);
+            console.error("Erro detalhado:", err);
+            alert("Erro ao salvar: " + err.message);
+        } finally {
+            btnSave.disabled = false;
+            btnSave.innerText = "Salvar";
         }
-    }
+    },
+
+    // ... (restante das funções: init, renderProducts, processMove)
 };
+
+// ... (restante do código: ui e listeners)
