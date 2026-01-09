@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster - Gestão Niterói</title>
+    <title>LogMaster Pro - Gestão de Fluxo</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <nav class="navbar">
         <div class="container">
-            <span class="logo">🚚 LogMaster <small>Controle de Fluxo</small></span>
+            <span class="logo">🚚 LogMaster <small>Niterói / Gestão</small></span>
             <div class="nav-actions">
                 <button class="btn-primary" onclick="ui.openModal('product')">+ Novo Produto</button>
             </div>
@@ -29,15 +32,14 @@
                         <th>Ações</th>
                     </tr>
                 </thead>
-                <tbody id="stock-list">
-                    </tbody>
+                <tbody id="stock-list"></tbody>
             </table>
         </div>
     </main>
 
     <div id="modal-product" class="modal-overlay hidden">
         <div class="modal-card">
-            <h2>Cadastrar Novo Item</h2>
+            <h2>Cadastrar Item</h2>
             <form id="form-product">
                 <div class="field">
                     <label>Nome do Produto</label>
@@ -48,12 +50,12 @@
                     <input type="text" id="p-category" required>
                 </div>
                 <div class="field">
-                    <label>Foto Ilustrativa</label>
+                    <label>Foto do Item</label>
                     <input type="file" id="p-file" accept="image/*" onchange="app.handleImage(this)">
                 </div>
                 <div class="modal-buttons">
                     <button type="button" class="btn-ghost" onclick="ui.closeModal('product')">Cancelar</button>
-                    <button type="submit" class="btn-primary" id="btn-save-product">Salvar Produto</button>
+                    <button type="submit" class="btn-primary" id="btn-save-product">Salvar</button>
                 </div>
             </form>
         </div>
@@ -65,23 +67,20 @@
             <form id="form-move">
                 <input type="hidden" id="move-product-id">
                 <input type="hidden" id="move-type">
-                
                 <div class="field">
                     <label>Quantidade</label>
                     <input type="number" id="move-qty" min="1" required>
                 </div>
-
                 <div id="extra-fields" class="hidden">
                     <div class="field">
                         <label>Destino / Setor</label>
-                        <input type="text" id="move-sector" placeholder="Para onde vai?">
+                        <input type="text" id="move-sector" placeholder="Ex: Manutenção">
                     </div>
                     <div class="field">
                         <label>Colaborador Responsável</label>
-                        <input type="text" id="move-employee" placeholder="Quem está retirando?">
+                        <input type="text" id="move-employee" placeholder="Quem retirou?">
                     </div>
                 </div>
-
                 <div class="modal-buttons">
                     <button type="button" class="btn-ghost" onclick="ui.closeModal('move')">Cancelar</button>
                     <button type="submit" id="btn-confirm-move" class="btn-primary">Confirmar</button>
@@ -92,16 +91,28 @@
 
     <div id="modal-history" class="modal-overlay hidden">
         <div class="modal-card large">
-            <h2>Histórico de Movimentações</h2>
+            <h2>Análise de Utilização</h2>
+            
+            <div class="stats-grid">
+                <div class="chart-container">
+                    <canvas id="usageChart"></canvas>
+                </div>
+                <div class="averages-panel">
+                    <div class="avg-card"><span>Média 7 dias</span><strong id="avg-7">0</strong></div>
+                    <div class="avg-card"><span>Média 15 dias</span><strong id="avg-15">0</strong></div>
+                    <div class="avg-card"><span>Média 30 dias</span><strong id="avg-30">0</strong></div>
+                </div>
+            </div>
+
+            <h3 style="margin-top:20px">Logs Recentes (30 dias)</h3>
             <div id="history-content" class="history-list"></div>
+            
             <div class="modal-buttons">
                 <button type="button" class="btn-ghost" onclick="ui.closeModal('history')">Fechar</button>
             </div>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
