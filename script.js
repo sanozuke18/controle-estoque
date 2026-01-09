@@ -1,3 +1,4 @@
+// CONFIGURAÇÃO DO FIREBASE (Jefferson)
 const firebaseConfig = {
     apiKey: "AIzaSyD37ZAe9afx70HjjiGQzxbUkrhtYSqVVms",
     authDomain: "estoque-master-ba8d3.firebaseapp.com",
@@ -8,7 +9,9 @@ const firebaseConfig = {
 };
 
 // --- CONFIGURAÇÃO EMAILJS ---
-emailjs.init("SUA_PUBLIC_KEY_EMAILJS"); // Substitua pela sua chave do EmailJS
+emailjs.init("Q0pklfvcpouN8CSjW"); 
+const EMAILJS_SERVICE_ID = "service_ip0xm56";
+const EMAILJS_TEMPLATE_ID = "SEU_TEMPLATE_ID_AQUI"; // Cole aqui o ID do seu template do EmailJS
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -16,13 +19,12 @@ let currentPhotoBase64 = "";
 let myChart = null;
 
 const app = {
-    // 1. COMPRESSOR DE IMAGENS
+    // 1. COMPRESSÃO DE IMAGEM
     handleImage(input) {
         const file = input.files[0];
         if (!file) return;
         const btn = document.getElementById('btn-save-product');
-        btn.disabled = true;
-        btn.innerText = "Processando...";
+        btn.disabled = true; btn.innerText = "Processando Foto...";
 
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -43,6 +45,7 @@ const app = {
     },
 
     init() {
+        // Observer em tempo real
         db.collection('produtos').orderBy('name').onSnapshot(snapshot => {
             const list = [];
             snapshot.forEach(doc => list.push({id: doc.id, ...doc.data()}));
@@ -50,7 +53,6 @@ const app = {
         });
     },
 
-    // 2. RENDERIZAÇÃO E ALERTAS VISUAIS
     renderProducts(items) {
         const tbody = document.getElementById('stock-list');
         tbody.innerHTML = '';
@@ -58,19 +60,17 @@ const app = {
             const isLow = item.qty <= (item.minThreshold || 0);
             tbody.innerHTML += `
                 <tr class="${isLow ? 'low-stock' : ''}">
-                    <td><img src="${item.photo || ''}" class="img-thumb" onerror="this.src='https://via.placeholder.com/50'"></td>
-                    <td>
-                        <strong>${item.name}</strong>
-                        ${isLow ? '<span class="badge-alert">BAIXO</span>' : ''}
-                    </td>
+                    <td><img src="${item.photo || ''}" class="img-thumb" onerror="this.src='https://via.placeholder.com/60'"></td>
+                    <td><strong>${item.name}</strong> ${isLow ? '<span class="badge-alert">ESTOQUE BAIXO</span>' : ''}</td>
                     <td>${item.category}</td>
                     <td><h2>${item.qty || 0}</h2></td>
                     <td>
                         <div class="action-group">
-                            <button class="btn-in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">📥</button>
-                            <button class="btn-out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">📤</button>
-                            <button class="btn-log" onclick="app.showHistory('${item.id}')">📈</button>
-                            <button style="border:none; background:none; cursor:pointer" onclick="app.deleteProduct('${item.id}')">🗑️</button>
+                            <button class="btn-in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">📥 Entrada</button>
+                            <button class="btn-out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">📤 Saída</button>
+                            <button class="btn-log" onclick="app.showHistory('${item.id}')">📊 Log</button>
+                            <button class="btn-icon" onclick="ui.openEdit('${item.id}', '${item.name}', '${item.category}', ${item.minThreshold || 0})" title="Editar">✏️</button>
+                            <button class="btn-icon" onclick="app.deleteProduct('${item.id}')" title="Excluir">🗑️</button>
                         </div>
                     </td>
                 </tr>
@@ -78,22 +78,33 @@ const app = {
         });
     },
 
-    async addProduct(e) {
+    // 2. CADASTRO OU EDIÇÃO
+    async handleProductSubmit(e) {
         e.preventDefault();
+        const editId = document.getElementById('p-edit-id').value;
         const data = {
             name: document.getElementById('p-name').value,
             category: document.getElementById('p-category').value,
             minThreshold: parseInt(document.getElementById('p-min').value),
-            photo: currentPhotoBase64,
-            qty: 0,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        await db.collection('produtos').add(data);
-        currentPhotoBase64 = "";
-        ui.closeModal('product');
+
+        if (currentPhotoBase64) data.photo = currentPhotoBase64;
+
+        try {
+            if (editId) {
+                await db.collection('produtos').doc(editId).update(data);
+            } else {
+                data.qty = 0;
+                data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                await db.collection('produtos').add(data);
+            }
+            currentPhotoBase64 = "";
+            ui.closeModal('product');
+        } catch (err) { alert(err.message); }
     },
 
-    // 3. LOGICA DE MOVIMENTAÇÃO E DISPARO DE E-MAIL
+    // 3. MOVIMENTAÇÃO E ALERTA DE E-MAIL
     async processMove(e) {
         e.preventDefault();
         const pid = document.getElementById('move-product-id').value;
@@ -108,7 +119,7 @@ const app = {
             const pData = doc.data();
             const newQty = type === 'ENTRADA' ? (pData.qty + qtyMove) : (pData.qty - qtyMove);
             
-            if (newQty < 0) return alert("Saldo insuficiente!");
+            if (newQty < 0) return alert("Erro: Saldo insuficiente!");
 
             await productRef.update({ qty: newQty });
             await db.collection('historico').add({
@@ -116,7 +127,7 @@ const app = {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Alerta de E-mail se atingir estoque baixo
+            // Disparo de E-mail se atingir nível baixo na SAÍDA
             if (type === 'SAIDA' && newQty <= (pData.minThreshold || 0)) {
                 this.sendEmailAlert(pData.name, newQty, pData.minThreshold);
             }
@@ -125,28 +136,25 @@ const app = {
         } catch (err) { alert(err.message); }
     },
 
-    sendEmailAlert(name, qty, threshold) {
-        
+    sendEmailAlert(name, qty, limit) {
         const params = {
             product_name: name,
             current_qty: qty,
-            min_threshold: threshold,
-            to_emails: "jefferson@exemplo.com" // Mude para seus e-mails
+            min_threshold: limit,
+            to_emails: "seu-email@exemplo.com" // Insira seu e-mail de destino aqui
         };
-
-        emailjs.send('SEU_SERVICE_ID', 'SEU_TEMPLATE_ID', params)
-            .then(() => console.log('Alerta enviado por e-mail!'))
-            .catch(err => console.error('Falha e-mail:', err));
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params)
+            .then(() => console.log('E-mail enviado.'))
+            .catch(err => console.error('Erro e-mail:', err));
     },
 
-    // 4. ESTATISTICAS E GRAFICOS
+    // 4. ANÁLISE DE CONSUMO E GRÁFICO
     async showHistory(pid) {
         const content = document.getElementById('history-content');
-        content.innerHTML = 'Analisando histórico...';
+        content.innerHTML = 'Buscando estatísticas...';
         ui.openModal('history');
 
-        const trintaDias = new Date();
-        trintaDias.setDate(trintaDias.getDate() - 30);
+        const trintaDias = new Date(); trintaDias.setDate(trintaDias.getDate() - 30);
 
         try {
             const snap = await db.collection('historico')
@@ -173,7 +181,10 @@ const app = {
                 const date = l.timestamp ? l.timestamp.toDate().toLocaleString('pt-BR') : 'Agora';
                 content.innerHTML += `<div class="log-item"><span class="${l.type === 'ENTRADA' ? 'badge-in' : 'badge-out'}">${l.type} ${l.qty}un</span> - ${date} | Setor: ${l.sector} | Resp: ${l.employee}</div>`;
             });
-        } catch (err) { content.innerHTML = err.message; }
+            if(logs.length === 0) content.innerHTML = '<p style="padding:20px">Nenhuma movimentação nos últimos 30 dias.</p>';
+        } catch (err) { 
+            content.innerHTML = "Erro de Índice: Caso não tenha feito, abra o console (F12) e clique no link para criar o índice no Firebase."; 
+        }
     },
 
     renderChart(logs) {
@@ -186,7 +197,7 @@ const app = {
         const consumo = dias.map(dia => logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) === dia).reduce((s,c)=>s+c.qty, 0));
         myChart = new Chart(ctx, {
             type: 'line',
-            data: { labels: dias, datasets: [{ label: 'Consumo', data: consumo, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.3 }] },
+            data: { labels: dias, datasets: [{ label: 'Consumo', data: consumo, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4 }] },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
     },
@@ -198,11 +209,23 @@ const app = {
 
 const ui = {
     openModal(id) { document.getElementById(`modal-${id}`).classList.remove('hidden'); },
-    closeModal(id) { document.getElementById(`modal-${id}`).classList.add('hidden'); if(id!=='history') document.querySelector(`#modal-${id} form`).reset(); },
+    closeModal(id) { 
+        document.getElementById(`modal-${id}`).classList.add('hidden'); 
+        document.querySelector(`#modal-${id} form`).reset(); 
+        document.getElementById('p-edit-id').value = "";
+    },
+    openEdit(id, name, cat, min) {
+        document.getElementById('p-edit-id').value = id;
+        document.getElementById('p-name').value = name;
+        document.getElementById('p-category').value = cat;
+        document.getElementById('p-min').value = min;
+        document.getElementById('modal-product-title').innerText = "Editar Produto";
+        this.openModal('product');
+    },
     openMove(id, name, type) {
         document.getElementById('move-product-id').value = id;
         document.getElementById('move-type').value = type;
-        document.getElementById('move-title').innerText = type === 'ENTRADA' ? `Reposição: ${name}` : `Saída: ${name}`;
+        document.getElementById('move-title').innerText = type === 'ENTRADA' ? `Entrada: ${name}` : `Saída: ${name}`;
         const extra = document.getElementById('extra-fields');
         type === 'ENTRADA' ? extra.classList.add('hidden') : extra.classList.remove('hidden');
         this.openModal('move');
@@ -210,7 +233,7 @@ const ui = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('form-product').addEventListener('submit', (e) => app.addProduct(e));
+    document.getElementById('form-product').addEventListener('submit', (e) => app.handleProductSubmit(e));
     document.getElementById('form-move').addEventListener('submit', (e) => app.processMove(e));
     app.init();
 });

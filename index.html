@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster Pro - Gestão de Fluxo Inteligente</title>
+    <title>LogMaster Pro - Gestão Niterói</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -15,7 +15,7 @@
 <body>
     <nav class="navbar">
         <div class="container">
-            <span class="logo">🚚 LogMaster <small>Niterói / Gestão</small></span>
+            <span class="logo">🚚 LogMaster <small>Gestão de Estoque</small></span>
             <div class="nav-actions">
                 <button class="btn-primary" onclick="ui.openModal('product')">+ Novo Produto</button>
             </div>
@@ -41,8 +41,9 @@
 
     <div id="modal-product" class="modal-overlay hidden">
         <div class="modal-card">
-            <h2>Cadastrar Item</h2>
+            <h2 id="modal-product-title">Cadastrar Item</h2>
             <form id="form-product">
+                <input type="hidden" id="p-edit-id">
                 <div class="field">
                     <label>Nome do Produto</label>
                     <input type="text" id="p-name" required>
@@ -80,7 +81,7 @@
                 <div id="extra-fields" class="hidden">
                     <div class="field">
                         <label>Destino / Setor</label>
-                        <input type="text" id="move-sector" placeholder="Ex: Manutenção">
+                        <input type="text" id="move-sector" placeholder="Ex: Almoxarifado">
                     </div>
                     <div class="field">
                         <label>Colaborador Responsável</label>
@@ -97,19 +98,22 @@
 
     <div id="modal-history" class="modal-overlay hidden">
         <div class="modal-card large">
-            <h2>Análise de Utilização</h2>
-            
+            <h2>Análise de Consumo</h2>
             <div class="stats-grid">
-                <div class="chart-container"><canvas id="usageChart"></canvas></div>
+                <div class="chart-container">
+                    <canvas id="usageChart"></canvas>
+                </div>
                 <div class="averages-panel">
                     <div class="avg-card"><span>Média 7d</span><strong id="avg-7">0</strong></div>
                     <div class="avg-card"><span>Média 15d</span><strong id="avg-15">0</strong></div>
                     <div class="avg-card"><span>Média 30d</span><strong id="avg-30">0</strong></div>
                 </div>
             </div>
-            <h3 style="margin-top:20px">Logs Recentes</h3>
+            <h3 style="margin-top:20px">Movimentações Recentes</h3>
             <div id="history-content" class="history-list"></div>
-            <div class="modal-buttons"><button class="btn-ghost" onclick="ui.closeModal('history')">Fechar</button></div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-ghost" onclick="ui.closeModal('history')">Fechar</button>
+            </div>
         </div>
     </div>
 
