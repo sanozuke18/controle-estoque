@@ -1,4 +1,4 @@
-// --- CREDENCIAIS ---
+// --- CONFIGURAÇÃO ---
 const firebaseConfig = {
     apiKey: "AIzaSyD37ZAe9afx70HjjiGQzxbUkrhtYSqVVms",
     authDomain: "estoque-master-ba8d3.firebaseapp.com",
@@ -22,27 +22,23 @@ let currentPhotoBase64 = "";
 let isSignUpMode = false;
 let myChart = null;
 
-// --- SISTEMA DE AUTENTICAÇÃO E PERMISSÃO ---
+// --- AUTHENTICATION ---
 const auth = {
     async handleAuth(e) {
         e.preventDefault();
         const email = document.getElementById('login-email').value;
         const pass = document.getElementById('login-password').value;
-
         try {
             if (isSignUpMode) {
-                const res = await fAuth.createUserWithEmailAndPassword(email, pass);
-                // Cria perfil como PENDENTE no banco
+                await fAuth.createUserWithEmailAndPassword(email, pass);
                 await db.collection('usuarios').doc(email).set({
-                    funcao: "pendente",
-                    email: email,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    funcao: "pendente", email: email, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert("Cadastro realizado! Aguarde a aprovação do administrador.");
+                alert("Sucesso! Aguarde a liberação do Admin.");
             } else {
                 await fAuth.signInWithEmailAndPassword(email, pass);
             }
-        } catch (err) { alert("Falha na autenticação: " + err.message); }
+        } catch (err) { alert(err.message); }
     },
     logout() { fAuth.signOut().then(() => location.reload()); }
 };
@@ -52,8 +48,7 @@ fAuth.onAuthStateChanged(async (user) => {
         document.getElementById('auth-screen').classList.add('hidden');
         const userDoc = await db.collection('usuarios').doc(user.email).get();
         userRole = userDoc.exists ? userDoc.data().funcao : "pendente";
-        
-        document.getElementById('user-info').innerText = `${user.email} (${userRole})`;
+        document.getElementById('user-info').innerText = `${user.email}`;
 
         if (userRole === "pendente") {
             document.getElementById('pending-msg').classList.remove('hidden');
@@ -61,9 +56,7 @@ fAuth.onAuthStateChanged(async (user) => {
         } else {
             document.getElementById('pending-msg').classList.add('hidden');
             document.getElementById('main-content').classList.remove('hidden');
-            if (userRole === "admin") {
-                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-            }
+            if (userRole === "admin") document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
             app.init();
         }
     } else {
@@ -71,7 +64,7 @@ fAuth.onAuthStateChanged(async (user) => {
     }
 });
 
-// --- LÓGICA PRINCIPAL DO APP ---
+// --- CORE APP ---
 const app = {
     init() {
         db.collection('produtos').orderBy('name').onSnapshot(snap => {
@@ -92,7 +85,7 @@ const app = {
                 const MAX = 400; const scale = MAX / img.width;
                 canvas.width = MAX; canvas.height = img.height * scale;
                 canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.5);
+                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
             };
             img.src = e.target.result;
         };
@@ -101,9 +94,7 @@ const app = {
 
     filterProducts() {
         const term = document.getElementById('search-input').value.toLowerCase();
-        const filtered = fullInventory.filter(i => 
-            i.name.toLowerCase().includes(term) || i.category.toLowerCase().includes(term)
-        );
+        const filtered = fullInventory.filter(i => i.name.toLowerCase().includes(term) || i.category.toLowerCase().includes(term));
         this.renderProducts(filtered);
     },
 
@@ -113,22 +104,28 @@ const app = {
         items.forEach(item => {
             const threshold = item.minThreshold || 0;
             const isLow = item.qty <= threshold && threshold > 0;
-            const adminBtns = userRole === "admin" ? `
-                <button class="btn-in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">📥 In</button>
-                <button class="btn-icon" onclick="ui.openEdit('${item.id}', '${item.name}', '${item.category}', ${threshold})">✏️</button>
+            
+            // LAYOUT DOS NOVOS BOTÕES SOFISTICADOS
+            const adminTools = userRole === "admin" ? `
+                <button class="action-btn in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">📥 Repor</button>
+                <button class="btn-icon-only" onclick="ui.openEdit('${item.id}', '${item.name}', '${item.category}', ${threshold})" title="Editar">✏️</button>
+                <button class="btn-icon-only" onclick="app.deleteProduct('${item.id}')" title="Excluir">🗑️</button>
             ` : '';
 
             tbody.innerHTML += `
                 <tr class="${isLow ? 'low-stock' : ''}">
                     <td><img src="${item.photo || ''}" class="img-thumb" onerror="this.src='https://via.placeholder.com/60'"></td>
-                    <td><strong>${item.name}</strong> ${isLow ? '<span class="badge-alert">BAIXO</span>' : ''}</td>
-                    <td>${item.category}</td>
-                    <td><h2>${item.qty || 0}</h2></td>
                     <td>
-                        <div class="action-group">
-                            ${adminBtns}
-                            <button class="btn-out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">📤 Out</button>
-                            <button class="btn-log" onclick="app.showHistory('${item.id}')">📊</button>
+                        <div style="font-weight:700">${item.name}</div>
+                        ${isLow ? '<span class="status-pill">CRÍTICO</span>' : ''}
+                    </td>
+                    <td><span style="color:var(--text-sub);font-size:0.85rem">${item.category}</span></td>
+                    <td><strong style="font-size:1.1rem">${item.qty || 0}</strong> <small style="color:var(--text-sub)">un</small></td>
+                    <td>
+                        <div class="action-bar">
+                            ${adminTools}
+                            <button class="action-btn out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">📤 Retirar</button>
+                            <button class="action-btn chart" onclick="app.showHistory('${item.id}', '${item.name}')">📊 Analisar</button>
                         </div>
                     </td>
                 </tr>`;
@@ -160,17 +157,16 @@ const app = {
             if (type === 'SAIDA' && newQty <= (pData.minThreshold || 0) && pData.minThreshold > 0) {
                 emailjs.send(EMAIL_SERVICE, EMAIL_TEMPLATE, {
                     product_name: pData.name, current_qty: newQty, min_threshold: pData.minThreshold,
-                    to_emails: "gestor@niterói.com"
+                    to_emails: "gestor@niteroi.com"
                 });
             }
             ui.closeModal('move');
         } catch (err) { alert(err.message); }
     },
 
-    // --- GERENCIAMENTO DE USUÁRIOS (ADMIN) ---
     async loadUsers() {
         const tbody = document.getElementById('user-admin-list');
-        tbody.innerHTML = "Carregando...";
+        tbody.innerHTML = "<tr><td colspan='3'>Carregando...</td></tr>";
         const snap = await db.collection('usuarios').get();
         tbody.innerHTML = "";
         snap.forEach(doc => {
@@ -178,13 +174,13 @@ const app = {
             tbody.innerHTML += `
                 <tr>
                     <td>${doc.id}</td>
-                    <td><strong>${u.funcao}</strong></td>
+                    <td><span class="badge">${u.funcao}</span></td>
                     <td>
-                        <select onchange="app.updateUserRole('${doc.id}', this.value)" style="padding:5px;">
-                            <option value="">Mudar para...</option>
+                        <select class="action-btn" onchange="app.updateUserRole('${doc.id}', this.value)">
+                            <option value="">Alterar...</option>
                             <option value="admin">Admin</option>
                             <option value="colaborador">Colaborador</option>
-                            <option value="pendente">Pendente</option>
+                            <option value="pendente">Bloquear</option>
                         </select>
                     </td>
                 </tr>`;
@@ -193,23 +189,19 @@ const app = {
 
     async updateUserRole(email, role) {
         if (!role) return;
-        if (confirm(`Alterar acesso de ${email} para ${role}?`)) {
-            await db.collection('usuarios').doc(email).update({ funcao: role });
-            alert("Acesso atualizado!");
-            this.loadUsers();
-        }
+        await db.collection('usuarios').doc(email).update({ funcao: role });
+        this.loadUsers();
     },
 
-    // --- GRÁFICOS E MÉDIAS ---
-    async showHistory(pid) {
+    async showHistory(pid, name) {
+        document.getElementById('history-product-name').innerText = `Análise: ${name}`;
         ui.openModal('history');
         const trintaDias = new Date(); trintaDias.setDate(trintaDias.getDate() - 30);
         const snap = await db.collection('historico').where('productId', '==', pid).where('timestamp', '>=', trintaDias).orderBy('timestamp', 'desc').get();
         const logs = []; snap.forEach(doc => logs.push(doc.data()));
         
         const calcMedia = (d) => {
-            const sum = logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate() >= (new Date() - d*24*60*60*1000))
-                            .reduce((s, c) => s + c.qty, 0);
+            const sum = logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate() >= (new Date() - d*24*60*60*1000)).reduce((s, c) => s + c.qty, 0);
             return (sum / d).toFixed(1);
         };
         document.getElementById('avg-7').innerText = calcMedia(7);
@@ -217,8 +209,10 @@ const app = {
         
         this.renderChart(logs);
         document.getElementById('history-content').innerHTML = logs.map(l => `
-            <div class="log-item">${l.type} ${l.qty}un - ${l.sector} <br><small>Por: ${l.employee}</small></div>
-        `).join('');
+            <div class="log-item">
+                <span class="${l.type === 'ENTRADA' ? 'badge-in' : 'badge-out'}">${l.type} ${l.qty}un</span>
+                <span style="color:var(--text-sub)">- ${l.sector || 'N/I'} | ${l.employee}</span>
+            </div>`).join('');
     },
 
     renderChart(logs) {
@@ -229,7 +223,11 @@ const app = {
             return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); 
         }).reverse();
         const dados = dias.map(dia => logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) === dia).reduce((s,c)=>s+c.qty, 0));
-        myChart = new Chart(ctx, { type: 'line', data: { labels: dias, datasets: [{ label: 'Consumo', data: dados, borderColor: '#2563eb', tension: 0.3 }] } });
+        myChart = new Chart(ctx, { type: 'line', data: { labels: dias, datasets: [{ label: 'Consumo', data: dados, borderColor: '#4f46e5', tension: 0.3, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.05)' }] }, options: { responsive: true, maintainAspectRatio: false } });
+    },
+
+    async deleteProduct(id) {
+        if (confirm("Excluir item e histórico?")) await db.collection('produtos').doc(id).delete();
     }
 };
 
@@ -239,8 +237,8 @@ const ui = {
     toggleAuthMode() {
         isSignUpMode = !isSignUpMode;
         document.getElementById('auth-title').innerText = isSignUpMode ? "Criar Conta" : "LogMaster Pro";
-        document.getElementById('btn-auth-submit').innerText = isSignUpMode ? "Cadastrar Agora" : "Entrar no Sistema";
-        document.getElementById('auth-toggle').innerText = isSignUpMode ? "Já tem conta? Entre aqui" : "Não tem conta? Cadastre-se aqui";
+        document.getElementById('btn-auth-submit').innerText = isSignUpMode ? "Finalizar Cadastro" : "Entrar no Painel";
+        document.getElementById('auth-toggle').innerText = isSignUpMode ? "Já tem conta? Entrar" : "Novo por aqui? Criar conta";
     },
     openEdit(id, name, cat, min) {
         document.getElementById('p-edit-id').value = id;
@@ -263,10 +261,8 @@ document.getElementById('form-product').addEventListener('submit', (e) => {
     e.preventDefault();
     const id = document.getElementById('p-edit-id').value;
     const data = {
-        name: document.getElementById('p-name').value,
-        category: document.getElementById('p-category').value,
-        minThreshold: parseInt(document.getElementById('p-min').value),
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        name: document.getElementById('p-name').value, category: document.getElementById('p-category').value,
+        minThreshold: parseInt(document.getElementById('p-min').value), updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     if (currentPhotoBase64) data.photo = currentPhotoBase64;
     id ? db.collection('produtos').doc(id).update(data) : db.collection('produtos').add({...data, qty: 0});
