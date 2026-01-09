@@ -1,4 +1,3 @@
-// --- CONFIGURAÇÃO ---
 const firebaseConfig = {
     apiKey: "AIzaSyD37ZAe9afx70HjjiGQzxbUkrhtYSqVVms",
     authDomain: "estoque-master-ba8d3.firebaseapp.com",
@@ -22,7 +21,7 @@ let currentPhotoBase64 = "";
 let isSignUpMode = false;
 let myChart = null;
 
-// --- AUTHENTICATION ---
+// --- AUTH LOGIC ---
 const auth = {
     async handleAuth(e) {
         e.preventDefault();
@@ -34,11 +33,11 @@ const auth = {
                 await db.collection('usuarios').doc(email).set({
                     funcao: "pendente", email: email, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert("Sucesso! Aguarde a liberação do Admin.");
+                alert("Cadastro realizado! Aguarde aprovação.");
             } else {
                 await fAuth.signInWithEmailAndPassword(email, pass);
             }
-        } catch (err) { alert(err.message); }
+        } catch (err) { alert("Erro: " + err.message); }
     },
     logout() { fAuth.signOut().then(() => location.reload()); }
 };
@@ -48,7 +47,7 @@ fAuth.onAuthStateChanged(async (user) => {
         document.getElementById('auth-screen').classList.add('hidden');
         const userDoc = await db.collection('usuarios').doc(user.email).get();
         userRole = userDoc.exists ? userDoc.data().funcao : "pendente";
-        document.getElementById('user-info').innerText = `${user.email}`;
+        document.getElementById('user-info').innerText = user.email;
 
         if (userRole === "pendente") {
             document.getElementById('pending-msg').classList.remove('hidden');
@@ -64,7 +63,7 @@ fAuth.onAuthStateChanged(async (user) => {
     }
 });
 
-// --- CORE APP ---
+// --- APP CORE ---
 const app = {
     init() {
         db.collection('produtos').orderBy('name').onSnapshot(snap => {
@@ -85,7 +84,7 @@ const app = {
                 const MAX = 400; const scale = MAX / img.width;
                 canvas.width = MAX; canvas.height = img.height * scale;
                 canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.5);
             };
             img.src = e.target.result;
         };
@@ -105,27 +104,22 @@ const app = {
             const threshold = item.minThreshold || 0;
             const isLow = item.qty <= threshold && threshold > 0;
             
-            // LAYOUT DOS NOVOS BOTÕES SOFISTICADOS
-            const adminTools = userRole === "admin" ? `
-                <button class="action-btn in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">📥 Repor</button>
-                <button class="btn-icon-only" onclick="ui.openEdit('${item.id}', '${item.name}', '${item.category}', ${threshold})" title="Editar">✏️</button>
-                <button class="btn-icon-only" onclick="app.deleteProduct('${item.id}')" title="Excluir">🗑️</button>
+            const adminBtns = userRole === "admin" ? `
+                <button class="btn-action in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">In</button>
+                <button onclick="ui.openEdit('${item.id}', '${item.name}', '${item.category}', ${threshold})" style="background:none; border:none; cursor:pointer;">✏️</button>
             ` : '';
 
             tbody.innerHTML += `
                 <tr class="${isLow ? 'low-stock' : ''}">
-                    <td><img src="${item.photo || ''}" class="img-thumb" onerror="this.src='https://via.placeholder.com/60'"></td>
+                    <td><img src="${item.photo || ''}" class="img-thumb" onerror="this.src='https://via.placeholder.com/50'"></td>
+                    <td><strong>${item.name}</strong>${isLow ? '<span class="status-tag">BAIXO</span>' : ''}</td>
+                    <td style="color:#64748b; font-size:0.8rem">${item.category}</td>
+                    <td><strong>${item.qty || 0}</strong></td>
                     <td>
-                        <div style="font-weight:700">${item.name}</div>
-                        ${isLow ? '<span class="status-pill">CRÍTICO</span>' : ''}
-                    </td>
-                    <td><span style="color:var(--text-sub);font-size:0.85rem">${item.category}</span></td>
-                    <td><strong style="font-size:1.1rem">${item.qty || 0}</strong> <small style="color:var(--text-sub)">un</small></td>
-                    <td>
-                        <div class="action-bar">
-                            ${adminTools}
-                            <button class="action-btn out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">📤 Retirar</button>
-                            <button class="action-btn chart" onclick="app.showHistory('${item.id}', '${item.name}')">📊 Analisar</button>
+                        <div class="action-group">
+                            ${adminBtns}
+                            <button class="btn-action out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">Out</button>
+                            <button class="btn-action chart" onclick="app.showHistory('${item.id}', '${item.name}')">📊</button>
                         </div>
                     </td>
                 </tr>`;
@@ -157,7 +151,7 @@ const app = {
             if (type === 'SAIDA' && newQty <= (pData.minThreshold || 0) && pData.minThreshold > 0) {
                 emailjs.send(EMAIL_SERVICE, EMAIL_TEMPLATE, {
                     product_name: pData.name, current_qty: newQty, min_threshold: pData.minThreshold,
-                    to_emails: "gestor@niteroi.com"
+                    to_emails: "gestor@niterói.com"
                 });
             }
             ui.closeModal('move');
@@ -166,24 +160,17 @@ const app = {
 
     async loadUsers() {
         const tbody = document.getElementById('user-admin-list');
-        tbody.innerHTML = "<tr><td colspan='3'>Carregando...</td></tr>";
         const snap = await db.collection('usuarios').get();
         tbody.innerHTML = "";
         snap.forEach(doc => {
-            const u = doc.data();
-            tbody.innerHTML += `
-                <tr>
-                    <td>${doc.id}</td>
-                    <td><span class="badge">${u.funcao}</span></td>
-                    <td>
-                        <select class="action-btn" onchange="app.updateUserRole('${doc.id}', this.value)">
-                            <option value="">Alterar...</option>
-                            <option value="admin">Admin</option>
-                            <option value="colaborador">Colaborador</option>
-                            <option value="pendente">Bloquear</option>
-                        </select>
-                    </td>
-                </tr>`;
+            tbody.innerHTML += `<tr><td>${doc.id}</td><td>${doc.data().funcao}</td><td>
+                <select onchange="app.updateUserRole('${doc.id}', this.value)">
+                    <option value="">Mudar...</option>
+                    <option value="admin">Admin</option>
+                    <option value="colaborador">Colaborador</option>
+                    <option value="pendente">Bloquear</option>
+                </select>
+            </td></tr>`;
         });
     },
 
@@ -194,40 +181,28 @@ const app = {
     },
 
     async showHistory(pid, name) {
-        document.getElementById('history-product-name').innerText = `Análise: ${name}`;
+        document.getElementById('history-name').innerText = name;
         ui.openModal('history');
         const trintaDias = new Date(); trintaDias.setDate(trintaDias.getDate() - 30);
         const snap = await db.collection('historico').where('productId', '==', pid).where('timestamp', '>=', trintaDias).orderBy('timestamp', 'desc').get();
         const logs = []; snap.forEach(doc => logs.push(doc.data()));
         
-        const calcMedia = (d) => {
-            const sum = logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate() >= (new Date() - d*24*60*60*1000)).reduce((s, c) => s + c.qty, 0);
+        const calc = (d) => {
+            const sum = logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate() >= (new Date() - d*24*60*60*1000)).reduce((s,c)=>s+c.qty, 0);
             return (sum / d).toFixed(1);
         };
-        document.getElementById('avg-7').innerText = calcMedia(7);
-        document.getElementById('avg-30').innerText = calcMedia(30);
-        
+        document.getElementById('avg-7').innerText = calc(7);
+        document.getElementById('avg-30').innerText = calc(30);
         this.renderChart(logs);
-        document.getElementById('history-content').innerHTML = logs.map(l => `
-            <div class="log-item">
-                <span class="${l.type === 'ENTRADA' ? 'badge-in' : 'badge-out'}">${l.type} ${l.qty}un</span>
-                <span style="color:var(--text-sub)">- ${l.sector || 'N/I'} | ${l.employee}</span>
-            </div>`).join('');
+        document.getElementById('history-content').innerHTML = logs.map(l => `<div class="log-item">${l.type} ${l.qty}un - ${l.sector}</div>`).join('');
     },
 
     renderChart(logs) {
         const ctx = document.getElementById('usageChart').getContext('2d');
         if (myChart) myChart.destroy();
-        const dias = [...Array(7)].map((_, i) => { 
-            const d = new Date(); d.setDate(d.getDate() - i); 
-            return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); 
-        }).reverse();
+        const dias = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); }).reverse();
         const dados = dias.map(dia => logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) === dia).reduce((s,c)=>s+c.qty, 0));
-        myChart = new Chart(ctx, { type: 'line', data: { labels: dias, datasets: [{ label: 'Consumo', data: dados, borderColor: '#4f46e5', tension: 0.3, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.05)' }] }, options: { responsive: true, maintainAspectRatio: false } });
-    },
-
-    async deleteProduct(id) {
-        if (confirm("Excluir item e histórico?")) await db.collection('produtos').doc(id).delete();
+        myChart = new Chart(ctx, { type: 'line', data: { labels: dias, datasets: [{ label: 'Consumo', data: dados, borderColor: '#4f46e5', tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false } });
     }
 };
 
@@ -237,8 +212,7 @@ const ui = {
     toggleAuthMode() {
         isSignUpMode = !isSignUpMode;
         document.getElementById('auth-title').innerText = isSignUpMode ? "Criar Conta" : "LogMaster Pro";
-        document.getElementById('btn-auth-submit').innerText = isSignUpMode ? "Finalizar Cadastro" : "Entrar no Painel";
-        document.getElementById('auth-toggle').innerText = isSignUpMode ? "Já tem conta? Entrar" : "Novo por aqui? Criar conta";
+        document.getElementById('auth-toggle').innerText = isSignUpMode ? "Voltar ao Login" : "Não tem conta? Cadastre-se";
     },
     openEdit(id, name, cat, min) {
         document.getElementById('p-edit-id').value = id;

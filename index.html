@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster Pro v2.5</title>
-    <link rel="stylesheet" href="style.css">
+    <title>LogMaster Pro v2.6</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -18,66 +18,62 @@
     <div id="auth-screen" class="modal-overlay">
         <div class="modal-card auth-card">
             <div class="auth-header">
-                <div class="auth-icon">📦</div>
-                <h2 id="auth-title">LogMaster Pro</h2>
-                <p id="auth-desc">Gestão de Fluxo Inteligente</p>
+                <span class="auth-emoji">🔐</span>
+                <h2>LogMaster Pro</h2>
+                <p>Gestão de Estoque Niterói</p>
             </div>
             <form id="login-form">
                 <div class="field">
-                    <label>E-mail Corporativo</label>
-                    <input type="email" id="login-email" required placeholder="exemplo@dominio.com">
+                    <label>E-mail</label>
+                    <input type="email" id="login-email" required placeholder="email@exemplo.com">
                 </div>
                 <div class="field">
-                    <label>Senha de Acesso</label>
-                    <input type="password" id="login-password" required placeholder="••••••••">
+                    <label>Senha</label>
+                    <input type="password" id="login-password" required placeholder="••••••">
                 </div>
-                <button type="submit" class="btn-primary btn-full" id="btn-auth-submit">Entrar no Painel</button>
+                <button type="submit" class="btn-primary full-width" id="btn-auth-submit">Entrar no Sistema</button>
                 <div class="auth-footer">
-                    <a href="#" onclick="ui.toggleAuthMode()" id="auth-toggle">Novo por aqui? Criar conta</a>
+                    <a href="#" onclick="ui.toggleAuthMode()" id="auth-toggle">Não tem conta? Cadastre-se</a>
                 </div>
             </form>
         </div>
     </div>
 
-    <nav class="navbar">
-        <div class="container navbar-inner">
-            <div class="brand">
+    <header class="header">
+        <div class="container header-content">
+            <div class="logo">
                 <span class="logo-icon">🚚</span>
-                <span class="logo-text">LogMaster <small>v2.5</small></span>
+                <div class="logo-text">LogMaster <span>v2.6</span></div>
             </div>
             
-            <div class="search-box">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="search-input" placeholder="Pesquisar itens em estoque..." oninput="app.filterProducts()">
+            <div class="search-bar">
+                <span class="icon">🔍</span>
+                <input type="text" id="search-input" placeholder="Buscar por produto ou categoria..." oninput="app.filterProducts()">
             </div>
 
-            <div class="user-controls">
-                <span id="user-info" class="user-badge"></span>
+            <div class="nav-actions">
+                <span id="user-info" class="user-label"></span>
                 <button class="btn-ghost admin-only hidden" onclick="app.loadUsers(); ui.openModal('users-mgmt')">Acessos</button>
                 <button class="btn-primary admin-only hidden" onclick="ui.openModal('product')">+ Novo Item</button>
-                <button class="btn-icon-exit" onclick="auth.logout()" title="Sair">🚪</button>
+                <button class="btn-exit" onclick="auth.logout()">Sair</button>
             </div>
         </div>
-    </nav>
+    </header>
 
     <main class="container">
-        <div id="pending-msg" class="alert-box hidden">
-            <div class="alert-icon">⏳</div>
-            <div>
-                <h3>Conta em Análise</h3>
-                <p>O administrador Jefferson precisa liberar seu acesso antes de visualizar o estoque.</p>
-            </div>
+        <div id="pending-msg" class="alert-warning hidden">
+            <strong>⚠️ Acesso em Análise:</strong> Sua conta ainda não foi liberada pelo administrador.
         </div>
 
-        <div id="main-content" class="table-container hidden">
-            <table class="modern-table">
+        <div id="main-content" class="table-card hidden">
+            <table class="main-table">
                 <thead>
                     <tr>
-                        <th width="80">Item</th>
+                        <th width="70">Foto</th>
                         <th>Descrição</th>
                         <th>Categoria</th>
-                        <th>Saldo Atual</th>
-                        <th class="text-right">Gerenciar</th>
+                        <th>Saldo</th>
+                        <th class="text-right">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="stock-list"></tbody>
@@ -88,14 +84,12 @@
     <div id="modal-users-mgmt" class="modal-overlay hidden">
         <div class="modal-card large">
             <div class="modal-header">
-                <h2>Controle de Permissões</h2>
-                <button class="close-x" onclick="ui.closeModal('users-mgmt')">&times;</button>
+                <h3>Permissões de Usuários</h3>
+                <button class="close-btn" onclick="ui.closeModal('users-mgmt')">&times;</button>
             </div>
-            <div class="scroll-area">
+            <div class="table-scroll">
                 <table class="simple-table">
-                    <thead>
-                        <tr><th>E-mail</th><th>Status</th><th>Atribuir</th></tr>
-                    </thead>
+                    <thead><tr><th>E-mail</th><th>Função</th><th>Ação</th></tr></thead>
                     <tbody id="user-admin-list"></tbody>
                 </table>
             </div>
@@ -104,16 +98,16 @@
 
     <div id="modal-product" class="modal-overlay hidden">
         <div class="modal-card">
-            <h2 id="modal-product-title">Detalhes do Produto</h2>
+            <h2 id="modal-product-title">Detalhes do Item</h2>
             <form id="form-product">
                 <input type="hidden" id="p-edit-id">
-                <div class="field"><label>Nome</label><input type="text" id="p-name" required></div>
+                <div class="field"><label>Nome do Produto</label><input type="text" id="p-name" required></div>
                 <div class="field"><label>Categoria</label><input type="text" id="p-category" required></div>
-                <div class="field"><label>Ponto de Alerta (Estoque Mínimo)</label><input type="number" id="p-min" required></div>
-                <div class="field"><label>Foto do Produto</label><input type="file" onchange="app.handleImage(this)"></div>
+                <div class="field"><label>Estoque de Alerta</label><input type="number" id="p-min" required></div>
+                <div class="field"><label>Foto</label><input type="file" onchange="app.handleImage(this)"></div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-link" onclick="ui.closeModal('product')">Voltar</button>
-                    <button type="submit" class="btn-primary">Salvar Registro</button>
+                    <button type="button" class="btn-link" onclick="ui.closeModal('product')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
                 </div>
             </form>
         </div>
@@ -126,7 +120,7 @@
                 <input type="hidden" id="move-product-id"><input type="hidden" id="move-type">
                 <div class="field"><label>Quantidade</label><input type="number" id="move-qty" min="1" required></div>
                 <div id="extra-fields" class="hidden">
-                    <div class="field"><label>Destino / Obra</label><input type="text" id="move-sector" placeholder="Ex: Niterói Centro"></div>
+                    <div class="field"><label>Setor / Destino</label><input type="text" id="move-sector" placeholder="Ex: Obra Niterói"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-link" onclick="ui.closeModal('move')">Cancelar</button>
@@ -138,15 +132,15 @@
 
     <div id="modal-history" class="modal-overlay hidden">
         <div class="modal-card large">
-            <h2 id="history-product-name">Análise de Consumo</h2>
-            <div class="dashboard-grid">
-                <div class="chart-wrapper"><canvas id="usageChart"></canvas></div>
-                <div class="kpi-panel">
-                    <div class="kpi-card"><span>Média Semanal</span><strong id="avg-7">0</strong></div>
-                    <div class="kpi-card"><span>Média Mensal</span><strong id="avg-30">0</strong></div>
+            <h2 id="history-name">Análise</h2>
+            <div class="chart-grid">
+                <div class="chart-area"><canvas id="usageChart"></canvas></div>
+                <div class="kpi-area">
+                    <div class="kpi-box"><span>7 dias</span><strong id="avg-7">0</strong></div>
+                    <div class="kpi-box"><span>30 dias</span><strong id="avg-30">0</strong></div>
                 </div>
             </div>
-            <div id="history-content" class="history-feed"></div>
+            <div id="history-content" class="history-list"></div>
             <div class="modal-footer">
                 <button class="btn-primary" onclick="ui.closeModal('history')">Fechar</button>
             </div>
