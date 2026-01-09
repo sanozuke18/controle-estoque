@@ -1,55 +1,47 @@
 :root {
-    --primary: #d37d18;
-    --primary-dark: #b86a12;
-    --bg: #f9fafb;
-    --text-main: #111827;
-    --text-muted: #6b7280;
+    --primary: #2563eb;
+    --success: #10b981;
+    --danger: #ef4444;
+    --bg: #f3f4f6;
     --white: #ffffff;
     --border: #e5e7eb;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-
-body { background-color: var(--bg); color: var(--text-main); line-height: 1.5; }
-
-.container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+body { background: var(--bg); color: #1f2937; }
+.container { max-width: 1000px; margin: 0 auto; padding: 20px; }
 
 /* Navbar */
-.navbar { background: #1f2937; color: white; padding: 1rem 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.navbar { background: #111827; color: white; padding: 1rem 0; }
 .navbar .container { display: flex; justify-content: space-between; align-items: center; }
-.logo { font-size: 1.4rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; }
+.logo { font-weight: 800; color: #60a5fa; }
 
-.nav-actions { display: flex; align-items: center; gap: 1rem; }
-.status-dot { width: 10px; height: 10px; border-radius: 50%; }
-.online { background: #10b981; box-shadow: 0 0 8px #10b981; }
-
-/* Dashboard Cards */
-.dashboard-stats { display: flex; gap: 1.5rem; margin: 2rem 0; }
-.stat-card { background: var(--white); flex: 1; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); }
-.stat-card h3 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
-.stat-card p { font-size: 1.75rem; font-weight: 700; }
-
-/* Table */
-.table-wrapper { background: var(--white); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+/* Table & Images */
+.table-wrapper { background: white; border-radius: 12px; overflow: hidden; margin-top: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
 table { width: 100%; border-collapse: collapse; }
-th { background: #f3f4f6; padding: 1rem; text-align: left; font-size: 0.85rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
-td { padding: 1rem; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
-tr:hover { background: #f9fafb; }
+th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+.img-thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; background: #eee; }
 
-/* Buttons */
-.btn-primary { background: var(--primary); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-.btn-primary:hover { background: var(--primary-dark); }
-.btn-ghost { background: transparent; border: 1px solid var(--border); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; }
-.btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; filter: grayscale(1); transition: 0.2s; }
-.btn-icon:hover { filter: grayscale(0); transform: scale(1.1); }
+/* Badges */
+.badge-in { color: var(--success); font-weight: bold; }
+.badge-out { color: var(--danger); font-weight: bold; }
 
-/* Modal */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); z-index: 100; }
-.modal-card { background: var(--white); width: 100%; max-width: 480px; padding: 2rem; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+/* Log List */
+.history-list { max-height: 400px; overflow-y: auto; margin: 1rem 0; border: 1px solid var(--border); border-radius: 8px; }
+.log-item { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; }
+.log-item:last-child { border: none; }
+.log-header { display: flex; justify-content: space-between; }
+
+/* Modais */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal-card { background: white; padding: 2rem; border-radius: 16px; width: 90%; max-width: 450px; }
+.modal-card.large { max-width: 650px; }
 .hidden { display: none; }
-.field { margin-bottom: 1.2rem; }
-.field label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; }
-.field input { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; outline: none; }
-.field input:focus { border-color: var(--primary); ring: 2px var(--primary); }
-.field-row { display: flex; gap: 1rem; }
-.modal-buttons { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem; }
+
+.field { margin-bottom: 1rem; }
+.field label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
+.field input, .field select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; }
+
+.btn-primary { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+.btn-ghost { background: #f3f4f6; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+.btn-action { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: white; cursor: pointer; margin-right: 5px; font-size: 0.8rem; }

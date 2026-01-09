@@ -3,62 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockMaster - Controle em Tempo Real</title>
+    <title>LogMaster - Controle de Fluxo</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar">
         <div class="container">
-            <span class="logo">📦 StockMaster</span>
+            <span class="logo">🚚 LogMaster <small>Fluxo de Materiais</small></span>
             <div class="nav-actions">
-                <div id="sync-indicator" class="status-dot online"></div>
-                <span id="sync-text">Sincronizado</span>
-                <button class="btn-primary" onclick="ui.openModal()">+ Novo Produto</button>
+                <button class="btn-primary" onclick="ui.openModal('product')">+ Cadastrar Produto</button>
             </div>
         </div>
     </nav>
 
     <main class="container">
-        <header class="dashboard-stats">
-            <div class="stat-card">
-                <h3>Total de Itens</h3>
-                <p id="total-qty">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Valor em Estoque</h3>
-                <p id="total-value">R$ 0,00</p>
-            </div>
-        </header>
-
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>Cód.</th>
+                        <th>Foto</th>
                         <th>Produto</th>
                         <th>Categoria</th>
-                        <th>Qtd.</th>
-                        <th>Unitário</th>
-                        <th>Subtotal</th>
+                        <th>Qtd. Atual</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
-                <tbody id="stock-list">
-                    </tbody>
+                <tbody id="stock-list"></tbody>
             </table>
         </div>
     </main>
 
-    <div id="modal" class="modal-overlay hidden">
+    <div id="modal-product" class="modal-overlay hidden">
         <div class="modal-card">
-            <h2 id="modal-title">Novo Produto</h2>
-            <form id="product-form">
-                <input type="hidden" id="edit-id">
-                <div class="field">
-                    <label>Código de Barras / Ref</label>
-                    <input type="text" id="p-code" required>
-                </div>
+            <h2>Novo Produto</h2>
+            <form id="form-product">
                 <div class="field">
                     <label>Nome do Produto</label>
                     <input type="text" id="p-name" required>
@@ -67,21 +46,58 @@
                     <label>Categoria</label>
                     <input type="text" id="p-category" required>
                 </div>
-                <div class="field-row">
-                    <div class="field">
-                        <label>Quantidade</label>
-                        <input type="number" id="p-qty" min="0" required>
-                    </div>
-                    <div class="field">
-                        <label>Preço Unitário</label>
-                        <input type="number" id="p-price" step="0.01" min="0" required>
-                    </div>
+                <div class="field">
+                    <label>Foto (URL ou Base64)</label>
+                    <input type="text" id="p-photo" placeholder="Link da imagem">
+                    <input type="file" id="p-file" accept="image/*" onchange="app.handleImage(this)">
                 </div>
                 <div class="modal-buttons">
-                    <button type="button" class="btn-ghost" onclick="ui.closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary">Salvar no Estoque</button>
+                    <button type="button" class="btn-ghost" onclick="ui.closeModal('product')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="modal-move" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h2 id="move-title">Movimentar</h2>
+            <form id="form-move">
+                <input type="hidden" id="move-product-id">
+                <div class="field">
+                    <label>Tipo</label>
+                    <select id="move-type" required>
+                        <option value="ENTRADA">Entrada (+)</option>
+                        <option value="SAIDA">Saída (-)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Quantidade</label>
+                    <input type="number" id="move-qty" min="1" required>
+                </div>
+                <div class="field">
+                    <label>Destino / Setor</label>
+                    <input type="text" id="move-sector" placeholder="Ex: Manutenção, Almoxarifado..." required>
+                </div>
+                <div class="field">
+                    <label>Colaborador Responsável</label>
+                    <input type="text" id="move-employee" placeholder="Quem está retirando?" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-ghost" onclick="ui.closeModal('move')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-history" class="modal-overlay hidden">
+        <div class="modal-card large">
+            <h2>Log de Movimentações</h2>
+            <div id="history-content" class="history-list"></div>
+            <div class="modal-buttons">
+                <button class="btn-ghost" onclick="ui.closeModal('history')">Fechar</button>
+            </div>
         </div>
     </div>
 
