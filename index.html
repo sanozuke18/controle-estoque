@@ -3,183 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Estoque - Jefferson</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --primary-color: #d37d18;
-            --secondary-color: #2c3e50;
-            --bg-color: #f4f7f6;
-            --text-color: #333;
-            --danger: #d9534f;
-            --success: #5cb85c;
-        }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); margin: 0; color: var(--text-color); }
-        header { background-color: var(--secondary-color); color: white; padding: 1rem 5%; }
-        nav { display: flex; justify-content: space-between; align-items: center; }
-        .nav-links .btn-nav { background: transparent; border: none; color: white; cursor: pointer; font-size: 1rem; margin-left: 15px; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: 40px auto; }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding: 20px 5%; }
-        .product-card { background: white; padding: 15px; border-radius: 10px; border-bottom: 4px solid var(--primary-color); transition: 0.3s; text-align: center;}
-        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-primary { background-color: var(--primary-color); color: white; }
-        .btn-outline-primary { background-color: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
-        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
-        .filter-menu { display: flex; gap: 10px; margin: 15px 0; }
-        .active { background: var(--primary-color) !important; color: white !important; }
-    </style>
+    <title>StockMaster - Controle em Tempo Real</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
-    <header id="main-header" style="display: none;">
-        <nav>
-            <div class="logo">📦 Controle de Estoque</div>
-            <div class="nav-links">
-                <button onclick="router.navigate('dashboard')" class="btn-nav">Dashboard</button>
-                <button id="btn-admin-users" onclick="router.navigate('adminUsers')" class="btn-nav" style="display: none;">Usuários</button>
-                <button onclick="auth.logout()" class="btn-nav">Sair</button>
+    <nav class="navbar">
+        <div class="container">
+            <span class="logo">📦 StockMaster</span>
+            <div class="nav-actions">
+                <div id="sync-indicator" class="status-dot online"></div>
+                <span id="sync-text">Sincronizado</span>
+                <button class="btn-primary" onclick="ui.openModal()">+ Novo Produto</button>
             </div>
-        </nav>
-    </header>
+        </div>
+    </nav>
 
-    <main id="app-container">
-        <div style="text-align: center; margin-top: 100px;">Carregando sistema...</div>
+    <main class="container">
+        <header class="dashboard-stats">
+            <div class="stat-card">
+                <h3>Total de Itens</h3>
+                <p id="total-qty">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Valor em Estoque</h3>
+                <p id="total-value">R$ 0,00</p>
+            </div>
+        </header>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cód.</th>
+                        <th>Produto</th>
+                        <th>Categoria</th>
+                        <th>Qtd.</th>
+                        <th>Unitário</th>
+                        <th>Subtotal</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="stock-list">
+                    </tbody>
+            </table>
+        </div>
     </main>
 
-    <template id="template-login">
-        <div class="card">
-            <h2>Login</h2>
-            <form onsubmit="event.preventDefault(); auth.login(this.user.value, this.pass.value)">
-                <input type="text" name="user" placeholder="Usuário (admin)" required style="width:90%; padding:10px; margin-bottom:10px;"><br>
-                <input type="password" name="pass" placeholder="Senha (admin)" required style="width:90%; padding:10px; margin-bottom:10px;"><br>
-                <button type="submit" class="btn btn-primary" style="width:100%">Entrar</button>
+    <div id="modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <h2 id="modal-title">Novo Produto</h2>
+            <form id="product-form">
+                <input type="hidden" id="edit-id">
+                <div class="field">
+                    <label>Código de Barras / Ref</label>
+                    <input type="text" id="p-code" required>
+                </div>
+                <div class="field">
+                    <label>Nome do Produto</label>
+                    <input type="text" id="p-name" required>
+                </div>
+                <div class="field">
+                    <label>Categoria</label>
+                    <input type="text" id="p-category" required>
+                </div>
+                <div class="field-row">
+                    <div class="field">
+                        <label>Quantidade</label>
+                        <input type="number" id="p-qty" min="0" required>
+                    </div>
+                    <div class="field">
+                        <label>Preço Unitário</label>
+                        <input type="number" id="p-price" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-ghost" onclick="ui.closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar no Estoque</button>
+                </div>
             </form>
         </div>
-    </template>
+    </div>
 
-    <template id="template-dashboard">
-        <div style="padding: 20px 5%;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h2>Meus Produtos</h2>
-                <input type="text" id="search" placeholder="Buscar..." onkeyup="dashboard.filter(this.value)" style="padding:8px;">
-                <button onclick="router.navigate('addProduct')" class="btn btn-primary">+ Novo</button>
-            </div>
-            <div id="product-list" class="product-grid"></div>
-        </div>
-    </template>
-
-    <template id="template-addProduct">
-        <div class="card">
-            <h2>Novo Produto</h2>
-            <form onsubmit="event.preventDefault(); dashboard.saveProduct(this)">
-                <input type="text" name="nome" placeholder="Nome" required style="width:95%; margin-bottom:10px; padding:8px;"><br>
-                <input type="number" name="qtd" placeholder="Qtd Inicial" required style="width:95%; margin-bottom:10px; padding:8px;"><br>
-                <input type="number" name="min" placeholder="Qtd Mínima" required style="width:95%; margin-bottom:10px; padding:8px;"><br>
-                <button type="submit" class="btn btn-primary" style="width:100%">Salvar</button>
-            </form>
-        </div>
-    </template>
-
-    <template id="template-details">
-        <div style="padding: 20px 5%;">
-            <button onclick="router.navigate('dashboard')" class="btn">← Voltar</button>
-            <div id="detail-content"></div>
-        </div>
-    </template>
-
-    <script>
-        // BANCO DE DADOS LOCAL
-        const db = {
-            init() {
-                if (!localStorage.getItem('users')) localStorage.setItem('users', JSON.stringify([{u:'admin', p:'admin', r:'admin'}]));
-                if (!localStorage.getItem('prods')) localStorage.setItem('prods', JSON.stringify([]));
-                if (!localStorage.getItem('logs')) localStorage.setItem('logs', JSON.stringify([]));
-            },
-            get: (k) => JSON.parse(localStorage.getItem(k)),
-            set: (k, v) => localStorage.setItem(k, JSON.stringify(v))
-        };
-
-        // AUTENTICAÇÃO
-        const auth = {
-            user: null,
-            login(u, p) {
-                const users = db.get('users');
-                const found = users.find(user => user.u === u && user.p === p);
-                if (found) {
-                    this.user = found;
-                    router.navigate('dashboard');
-                } else alert("Erro!");
-            },
-            logout() { this.user = null; router.navigate('login'); }
-        };
-
-        // ROTEADOR
-        const router = {
-            navigate(screen, id = null) {
-                const container = document.getElementById('app-container');
-                const header = document.getElementById('main-header');
-                header.style.display = this.user ? 'block' : 'none';
-                
-                const temp = document.getElementById('template-' + screen);
-                container.innerHTML = '';
-                container.appendChild(temp.content.cloneNode(true));
-
-                if(screen === 'dashboard') dashboard.render();
-                if(screen === 'details') dashboard.renderDetails(id);
-            }
-        };
-
-        // LÓGICA DE PRODUTOS
-        const dashboard = {
-            saveProduct(f) {
-                const p = db.get('prods');
-                const newP = { id: Date.now(), n: f.nome.value, q: parseInt(f.qtd.value), m: parseInt(f.min.value) };
-                p.push(newP);
-                db.set('prods', p);
-                router.navigate('dashboard');
-            },
-            render() {
-                const prods = db.get('prods');
-                document.getElementById('product-list').innerHTML = prods.map(p => `
-                    <div class="product-card">
-                        <h3>${p.n}</h3>
-                        <p>Estoque: ${p.q}</p>
-                        <button onclick="router.navigate('details', ${p.id})" class="btn btn-outline-primary">Ver Logs</button>
-                    </div>
-                `).join('');
-            },
-            renderDetails(id) {
-                const p = db.get('prods').find(x => x.id === id);
-                document.getElementById('detail-content').innerHTML = `
-                    <h2>${p.n}</h2>
-                    <p>Estoque Atual: ${p.q} | Mínimo: ${p.m}</p>
-                    <div class="card" style="max-width:100%">
-                        <h3>Movimentar</h3>
-                        <form onsubmit="event.preventDefault(); dashboard.move(${id}, this.tipo.value, this.qtd.value)">
-                            <select name="tipo"><option>Entrada</option><option>Saída</option></select>
-                            <input type="number" name="qtd" required>
-                            <button class="btn btn-primary">Registrar</button>
-                        </form>
-                    </div>
-                `;
-            },
-            move(id, t, q) {
-                let prods = db.get('prods');
-                const idx = prods.findIndex(x => x.id === id);
-                q = parseInt(q);
-                if(t === 'Saída' && prods[idx].q < q) return alert("Sem estoque!");
-                prods[idx].q += (t === 'Entrada' ? q : -q);
-                db.set('prods', prods);
-                this.renderDetails(id);
-            }
-        };
-
-        // INICIAR
-        window.onload = () => {
-            db.init();
-            router.navigate('login');
-        };
-    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
