@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster Pro - Gestão Niterói</title>
+    <title>LogMaster Pro - Sistema de Gestão</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -15,7 +15,7 @@
 <body>
     <nav class="navbar">
         <div class="container">
-            <span class="logo">🚚 LogMaster <small>Gestão de Estoque</small></span>
+            <span class="logo">🚚 LogMaster <small>Gestão de Fluxo</small></span>
             <div class="nav-actions">
                 <button class="btn-primary" onclick="ui.openModal('product')">+ Novo Produto</button>
             </div>
@@ -34,7 +34,8 @@
                         <th>Ações</th>
                     </tr>
                 </thead>
-                <tbody id="stock-list"></tbody>
+                <tbody id="stock-list">
+                    </tbody>
             </table>
         </div>
     </main>
@@ -53,16 +54,16 @@
                     <input type="text" id="p-category" required>
                 </div>
                 <div class="field">
-                    <label>Estoque Mínimo (Alerta)</label>
+                    <label>Estoque Mínimo (Alerta Individual)</label>
                     <input type="number" id="p-min" value="5" min="0" required>
                 </div>
                 <div class="field">
-                    <label>Foto do Item</label>
+                    <label>Alterar Foto</label>
                     <input type="file" id="p-file" accept="image/*" onchange="app.handleImage(this)">
                 </div>
                 <div class="modal-buttons">
                     <button type="button" class="btn-ghost" onclick="ui.closeModal('product')">Cancelar</button>
-                    <button type="submit" class="btn-primary" id="btn-save-product">Salvar</button>
+                    <button type="submit" class="btn-primary" id="btn-save-product">Salvar Alterações</button>
                 </div>
             </form>
         </div>
@@ -81,11 +82,11 @@
                 <div id="extra-fields" class="hidden">
                     <div class="field">
                         <label>Destino / Setor</label>
-                        <input type="text" id="move-sector" placeholder="Ex: Almoxarifado">
+                        <input type="text" id="move-sector" placeholder="Ex: Manutenção, Obra Niterói">
                     </div>
                     <div class="field">
                         <label>Colaborador Responsável</label>
-                        <input type="text" id="move-employee" placeholder="Quem retirou?">
+                        <input type="text" id="move-employee" placeholder="Quem está retirando?">
                     </div>
                 </div>
                 <div class="modal-buttons">
@@ -98,7 +99,7 @@
 
     <div id="modal-history" class="modal-overlay hidden">
         <div class="modal-card large">
-            <h2>Análise de Consumo</h2>
+            <h2>Análise de Utilização</h2>
             <div class="stats-grid">
                 <div class="chart-container">
                     <canvas id="usageChart"></canvas>
@@ -109,7 +110,7 @@
                     <div class="avg-card"><span>Média 30d</span><strong id="avg-30">0</strong></div>
                 </div>
             </div>
-            <h3 style="margin-top:20px">Movimentações Recentes</h3>
+            <h3 style="margin-top:20px">Movimentações Recentes (30 dias)</h3>
             <div id="history-content" class="history-list"></div>
             <div class="modal-buttons">
                 <button type="button" class="btn-ghost" onclick="ui.closeModal('history')">Fechar</button>
