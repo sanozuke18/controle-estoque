@@ -4,53 +4,59 @@
     --danger: #ef4444;
     --success: #10b981;
     --warning: #f59e0b;
-    --text-main: #1e293b;
-    --text-muted: #64748b;
+    --text: #1e293b;
     --border: #e2e8f0;
     --white: #ffffff;
     --bg: #f8fafc;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-body { background: var(--bg); color: var(--text-main); -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
 .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; width: 100%; }
 .hidden { display: none !important; }
 
 /* HEADER */
-.header { background: var(--white); border-bottom: 1px solid var(--border); padding: 12px 0; position: sticky; top: 0; z-index: 500; }
+.header { background: #fff; border-bottom: 1px solid var(--border); padding: 12px 0; position: sticky; top: 0; z-index: 100; }
 .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.logo { font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
-.search-bar { flex: 1; max-width: 400px; }
-.search-bar input { width: 100%; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); background: #f1f5f9; outline: none; }
-.nav-controls { display: flex; align-items: center; gap: 12px; }
-.user-chip { font-size: 0.7rem; font-weight: 700; color: var(--primary); background: var(--primary-soft); padding: 6px 12px; border-radius: 20px; }
+.logo { font-weight: 800; font-size: 1.1rem; }
+.search-bar { flex: 1; max-width: 350px; }
+.search-bar input { width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: #f1f5f9; outline: none; }
+.user-chip { font-size: 0.75rem; font-weight: 700; color: var(--primary); background: #eef2ff; padding: 6px 12px; border-radius: 20px; }
+
+/* BOTÕES DE EXPORTAÇÃO */
+.export-group { display: flex; gap: 8px; }
+.btn-export { background: #f1f5f9; border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 600; color: #475569; transition: 0.2s; }
+.btn-export:hover { background: #e2e8f0; color: var(--primary); border-color: var(--primary); }
 
 /* TABELA */
-.content-card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); margin-top: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th { background: #f8fafc; padding: 14px; text-align: left; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
-.data-table td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+.table-card { background: #fff; border-radius: 12px; border: 1px solid var(--border); margin-top: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; }
+.inventory-table { width: 100%; border-collapse: collapse; }
+.inventory-table th { background: #f8fafc; padding: 14px; text-align: left; font-size: 0.75rem; color: #64748b; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+.inventory-table td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 .img-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
 
 /* ALERTA */
-.low-stock { background: #fff1f2 !important; border-left: 4px solid var(--danger); }
+.low-stock { background: #fff1f2 !important; border-left: 5px solid var(--danger); }
 .badge-low { background: #fee2e2; color: #b91c1c; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; margin-left: 8px; }
 
-/* MODAL E GRÁFICO (Correção Visual para v3.3) */
+/* MODAIS E ANÁLISE */
 .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-.modal-card { background: var(--white); border-radius: 20px; width: 100%; max-width: 480px; padding: 30px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); position: relative; }
+.modal-card { background: #fff; border-radius: 20px; width: 100%; max-width: 480px; padding: 30px; box-shadow: 0 20px 25px rgba(0,0,0,0.2); }
 .modal-card.large { max-width: 850px; }
 
 .analysis-grid { display: flex; gap: 24px; margin-top: 20px; flex-wrap: wrap; align-items: stretch; }
-.chart-wrapper { flex: 1; min-width: 320px; min-height: 350px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 15px; position: relative; }
+.chart-container { flex: 1; min-width: 320px; min-height: 350px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 15px; position: relative; }
 .kpi-panel { width: 200px; display: flex; flex-direction: column; gap: 12px; }
 .kpi-card { background: #f1f5f9; padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
 .kpi-card strong { display: block; font-size: 1.6rem; color: var(--primary); margin-top: 5px; }
 
-/* BOTÕES */
+.feed { max-height: 200px; overflow-y: auto; background: #fafafa; border-radius: 10px; border: 1px solid var(--border); margin-top: 15px; }
+.log-item { padding: 10px; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+
+/* BOTÕES GERAIS */
 .btn-primary { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-.btn-action { border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; margin-right: 4px; }
+.btn-action { border: none; padding: 6px 12px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; cursor: pointer; margin-right: 4px; transition: 0.2s; }
 .btn-action.in { background: #ecfdf5; color: var(--success); }
 .btn-action.out { background: #fffbeb; color: var(--warning); }
-.btn-action.chart { background: var(--primary-soft); color: var(--primary); }
+.btn-action.chart { background: #eef2ff; color: var(--primary); }
 .btn-danger-light { background: #fee2e2; color: #b91c1c; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: 600; }

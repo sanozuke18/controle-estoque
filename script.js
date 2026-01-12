@@ -8,10 +8,10 @@ const firebaseConfig = {
     appId: "1:541199550434:web:90083885daa8a9756fdbbb"
 };
 
-// --- CONFIGURAÇÃO EMAILJS ---
+// --- CONFIGURAÇÃO EMAILJS (v3.9) ---
 emailjs.init("Q0pklfvcpouN8CSjW");
 const EMAIL_SERVICE = "service_ip0xm56";
-const EMAIL_TEMPLATE = "template_h537y68";
+const EMAIL_TEMPLATE = "template_04ocb0p"; 
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -23,7 +23,7 @@ let currentPhotoBase64 = "";
 let isSignUpMode = false;
 let myChart = null;
 
-// --- GESTÃO DE ACESSO ---
+// --- AUTENTICAÇÃO ---
 const auth = {
     async handleAuth(e) {
         e.preventDefault();
@@ -35,9 +35,9 @@ const auth = {
                 await db.collection('usuarios').doc(email).set({
                     funcao: "pendente", email: email, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert("Cadastro realizado! Aguarde aprovação.");
+                alert("Cadastro realizado! Aguarde a liberação do administrador Jefferson.");
             } else { await fAuth.signInWithEmailAndPassword(email, pass); }
-        } catch (err) { alert("Erro: " + err.message); }
+        } catch (err) { alert("Erro de Acesso: " + err.message); }
     },
     logout() { fAuth.signOut().then(() => location.reload()); }
 };
@@ -61,14 +61,14 @@ fAuth.onAuthStateChanged(async (user) => {
     } else { document.getElementById('auth-screen').classList.remove('hidden'); }
 });
 
-// --- LÓGICA PRINCIPAL ---
+// --- LÓGICA DO APP ---
 const app = {
     init() {
         db.collection('produtos').orderBy('name').onSnapshot(snap => {
             fullInventory = [];
             snap.forEach(doc => fullInventory.push({id: doc.id, ...doc.data()}));
             this.renderProducts(fullInventory);
-        }, err => console.error("Firestore Bloqueado (Verifique AdBlock):", err));
+        }, err => console.error("Firestore Error (Check AdBlock):", err));
     },
 
     handleImage(input) {
@@ -101,21 +101,17 @@ const app = {
         items.forEach(item => {
             const threshold = item.minThreshold || 0;
             const isLow = item.qty <= threshold && threshold > 0;
-            
-            const adminTools = userRole === "admin" ? `
-                <button class="btn-action in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">In</button>
-                <button onclick="ui.openEdit('${item.id}', '${item.name}', '${item.category}', ${threshold})" style="background:none; border:none; cursor:pointer; font-size:1.1rem">✏️</button>
-            ` : '';
+            const admin = userRole === "admin" ? `<button class="btn-action in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">In</button><button onclick="ui.openEdit('${item.id}', '${item.name}', '${item.category}', ${threshold})" style="background:none; border:none; cursor:pointer; font-size:1.1rem">✏️</button>` : '';
 
             tbody.innerHTML += `
                 <tr class="${isLow ? 'low-stock' : ''}">
                     <td><img src="${item.photo || 'https://placehold.co/48'}" class="img-thumb"></td>
-                    <td><div style="font-weight:700">${item.name}</div>${isLow ? '<span class="badge-low">ALERTA</span>' : ''}</td>
+                    <td><div style="font-weight:700">${item.name}</div>${isLow ? '<span class="badge-low">CRÍTICO</span>' : ''}</td>
                     <td><span style="color:#64748b">${item.category}</span></td>
                     <td><strong style="font-size:1.1rem">${item.qty || 0}</strong></td>
                     <td>
-                        <div style="display:flex; justify-content:flex-end;">
-                            ${adminTools}
+                        <div style="display:flex; justify-content:flex-end; gap:5px;">
+                            ${admin}
                             <button class="btn-action out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">Out</button>
                             <button class="btn-action chart" onclick="app.showHistory('${item.id}', '${item.name}')">📊</button>
                         </div>
@@ -135,31 +131,62 @@ const app = {
             const productRef = db.collection('produtos').doc(pid);
             const doc = await productRef.get();
             const pData = doc.data();
-            const newQty = type === 'ENTRADA' ? (pData.qty + qtyMove) : (pData.qty - qtyMove);
 
-            if (newQty < 0) return alert("Saldo insuficiente!");
+            // --- BLOQUEIO DE SALDO NEGATIVO (NOVO) ---
+            if (type === 'SAIDA' && qtyMove > pData.qty) {
+                return alert(`⚠️ Operação cancelada! Você está tentando retirar ${qtyMove}un, mas o saldo atual é de apenas ${pData.qty}un.`);
+            }
+
+            const newQty = type === 'ENTRADA' ? (pData.qty + qtyMove) : (pData.qty - qtyMove);
 
             await productRef.update({ qty: newQty });
             await db.collection('historico').add({
                 productId: pid, type, qty: qtyMove, sector, employee: fAuth.currentUser.email,
+                productName: pData.name,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // DISPARO DE EMAIL (SINCRONIZADO v3.3)
+            // DISPARO DE EMAIL (SINCRONIZADO v3.9)
             if (type === 'SAIDA' && newQty <= (pData.minThreshold || 0) && pData.minThreshold > 0) {
-                // ENVIAMOS EXATAMENTE O QUE ESTÁ NO SEU PAINEL EMAILJS
                 const params = {
                     product_name: String(pData.name),
-                    current_qty: Number(newQty),
-                    min_threshold: Number(pData.minThreshold)
+                    current_qty: String(newQty),
+                    min_threshold: String(pData.minThreshold)
                 };
-                
-                emailjs.send(EMAIL_SERVICE, EMAIL_TEMPLATE, params)
-                    .then(() => console.log("E-mail disparado."))
-                    .catch(err => alert("Erro ao enviar e-mail. Verifique se as tags {{product_name}}, {{current_qty}} e {{min_threshold}} estão corretas no seu painel."));
+                emailjs.send(EMAIL_SERVICE, EMAIL_TEMPLATE, params).catch(err => console.error("EmailJS Error", err));
             }
             ui.closeModal('move');
         } catch (err) { alert(err.message); }
+    },
+
+    // --- FUNÇÕES DE EXPORTAÇÃO CSV (NOVO) ---
+    exportInventory() {
+        let csv = "Produto;Categoria;Saldo;Minimo\n";
+        fullInventory.forEach(p => {
+            csv += `${p.name};${p.category};${p.qty};${p.minThreshold}\n`;
+        });
+        this.downloadCSV(csv, "Inventario_LogMaster.csv");
+    },
+
+    async exportHistory() {
+        const trintaDias = new Date(); trintaDias.setDate(trintaDias.getDate() - 30);
+        const snap = await db.collection('historico').where('timestamp', '>=', trintaDias).orderBy('timestamp', 'desc').get();
+        
+        let csv = "Data;Produto;Tipo;Qtd;Setor;Responsavel\n";
+        snap.forEach(doc => {
+            const d = doc.data();
+            const dataStr = d.timestamp ? d.timestamp.toDate().toLocaleString('pt-BR') : 'N/A';
+            csv += `${dataStr};${d.productName || 'N/A'};${d.type};${d.qty};${d.sector};${d.employee}\n`;
+        });
+        this.downloadCSV(csv, "Historico_Mensal_LogMaster.csv");
+    },
+
+    downloadCSV(csv, filename) {
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", filename);
+        link.click();
     },
 
     async loadUsers() {
@@ -169,8 +196,8 @@ const app = {
         snap.forEach(doc => {
             tbody.innerHTML += `<tr><td>${doc.id}</td><td><strong>${doc.data().funcao}</strong></td><td>
                 <select onchange="app.updateUserRole('${doc.id}', this.value)" style="padding:4px; border-radius:6px;">
-                    <option value="">Escolher...</option>
-                    <option value="admin">Administrador</option>
+                    <option value="">Ação...</option>
+                    <option value="admin">Admin</option>
                     <option value="colaborador">Colaborador</option>
                     <option value="pendente">Bloquear</option>
                 </select>
@@ -185,7 +212,7 @@ const app = {
     },
 
     async showHistory(pid, name) {
-        document.getElementById('history-name').innerText = `Análise: ${name}`;
+        document.getElementById('history-header').innerText = `Consumo: ${name}`;
         ui.openModal('history');
         const trintaDias = new Date(); trintaDias.setDate(trintaDias.getDate() - 30);
         
@@ -208,7 +235,7 @@ const app = {
                     <span style="color:${l.type === 'ENTRADA' ? 'var(--success)' : 'var(--warning)'}; font-weight:700">${l.type} ${l.qty}un</span>
                     - ${l.sector} | <small>${l.employee}</small>
                 </div>`).join('');
-        }, 400);
+        }, 500);
     },
 
     renderChart(logs) {
@@ -224,7 +251,7 @@ const app = {
             type: 'line', 
             data: { 
                 labels: dias, 
-                datasets: [{ label: 'Saídas', data: dados, borderColor: '#4f46e5', tension: 0.3, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.05)' }] 
+                datasets: [{ label: 'Consumo', data: dados, borderColor: '#4f46e5', tension: 0.3, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.05)' }] 
             }, 
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } 
         });
