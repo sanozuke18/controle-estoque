@@ -1,4 +1,4 @@
-// --- FIREBASE CONFIG ---
+// --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
     apiKey: "AIzaSyD37ZAe9afx70HjjiGQzxbUkrhtYSqVVms",
     authDomain: "estoque-master-ba8d3.firebaseapp.com",
@@ -8,6 +8,7 @@ const firebaseConfig = {
     appId: "1:541199550434:web:90083885daa8a9756fdbbb"
 };
 
+// --- CONFIGURAÇÃO EMAILJS ---
 emailjs.init("Q0pklfvcpouN8CSjW");
 const EMAIL_SERVICE = "service_ip0xm56";
 const EMAIL_TEMPLATE = "template_h537y68";
@@ -22,7 +23,7 @@ let currentPhotoBase64 = "";
 let isSignUpMode = false;
 let myChart = null;
 
-// --- AUTH ---
+// --- GESTÃO DE ACESSO ---
 const auth = {
     async handleAuth(e) {
         e.preventDefault();
@@ -34,11 +35,9 @@ const auth = {
                 await db.collection('usuarios').doc(email).set({
                     funcao: "pendente", email: email, createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert("Sucesso! Agora aguarde a liberação do seu acesso.");
-            } else {
-                await fAuth.signInWithEmailAndPassword(email, pass);
-            }
-        } catch (err) { alert(err.message); }
+                alert("Cadastro realizado! Aguarde aprovação.");
+            } else { await fAuth.signInWithEmailAndPassword(email, pass); }
+        } catch (err) { alert("Erro: " + err.message); }
     },
     logout() { fAuth.signOut().then(() => location.reload()); }
 };
@@ -59,19 +58,17 @@ fAuth.onAuthStateChanged(async (user) => {
             if (userRole === "admin") document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
             app.init();
         }
-    } else {
-        document.getElementById('auth-screen').classList.remove('hidden');
-    }
+    } else { document.getElementById('auth-screen').classList.remove('hidden'); }
 });
 
-// --- APP CORE ---
+// --- LÓGICA PRINCIPAL ---
 const app = {
     init() {
         db.collection('produtos').orderBy('name').onSnapshot(snap => {
             fullInventory = [];
             snap.forEach(doc => fullInventory.push({id: doc.id, ...doc.data()}));
             this.renderProducts(fullInventory);
-        });
+        }, err => console.error("Firestore Bloqueado (Verifique AdBlock):", err));
     },
 
     handleImage(input) {
@@ -106,20 +103,20 @@ const app = {
             const isLow = item.qty <= threshold && threshold > 0;
             
             const adminTools = userRole === "admin" ? `
-                <button class="btn-action in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">Repor</button>
+                <button class="btn-action in" onclick="ui.openMove('${item.id}', '${item.name}', 'ENTRADA')">In</button>
                 <button onclick="ui.openEdit('${item.id}', '${item.name}', '${item.category}', ${threshold})" style="background:none; border:none; cursor:pointer; font-size:1.1rem">✏️</button>
             ` : '';
 
             tbody.innerHTML += `
                 <tr class="${isLow ? 'low-stock' : ''}">
-                    <td><img src="${item.photo || ''}" class="img-thumb" onerror="this.src='https://via.placeholder.com/50'"></td>
+                    <td><img src="${item.photo || 'https://placehold.co/48'}" class="img-thumb"></td>
                     <td><div style="font-weight:700">${item.name}</div>${isLow ? '<span class="badge-low">ALERTA</span>' : ''}</td>
                     <td><span style="color:#64748b">${item.category}</span></td>
                     <td><strong style="font-size:1.1rem">${item.qty || 0}</strong></td>
                     <td>
-                        <div class="action-buttons">
+                        <div style="display:flex; justify-content:flex-end;">
                             ${adminTools}
-                            <button class="btn-action out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">Retirar</button>
+                            <button class="btn-action out" onclick="ui.openMove('${item.id}', '${item.name}', 'SAIDA')">Out</button>
                             <button class="btn-action chart" onclick="app.showHistory('${item.id}', '${item.name}')">📊</button>
                         </div>
                     </td>
@@ -133,7 +130,6 @@ const app = {
         const type = document.getElementById('move-type').value;
         const qtyMove = parseInt(document.getElementById('move-qty').value);
         const sector = type === 'ENTRADA' ? "REPOSIÇÃO" : document.getElementById('move-sector').value;
-        const employee = fAuth.currentUser.email;
 
         try {
             const productRef = db.collection('produtos').doc(pid);
@@ -141,19 +137,26 @@ const app = {
             const pData = doc.data();
             const newQty = type === 'ENTRADA' ? (pData.qty + qtyMove) : (pData.qty - qtyMove);
 
-            if (newQty < 0) return alert("Erro: Saldo insuficiente!");
+            if (newQty < 0) return alert("Saldo insuficiente!");
 
             await productRef.update({ qty: newQty });
             await db.collection('historico').add({
-                productId: pid, type, qty: qtyMove, sector, employee,
+                productId: pid, type, qty: qtyMove, sector, employee: fAuth.currentUser.email,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            // DISPARO DE EMAIL (SINCRONIZADO v3.3)
             if (type === 'SAIDA' && newQty <= (pData.minThreshold || 0) && pData.minThreshold > 0) {
-                emailjs.send(EMAIL_SERVICE, EMAIL_TEMPLATE, {
-                    product_name: pData.name, current_qty: newQty, min_threshold: pData.minThreshold,
-                    to_emails: "seu-email@dominio.com"
-                });
+                // ENVIAMOS EXATAMENTE O QUE ESTÁ NO SEU PAINEL EMAILJS
+                const params = {
+                    product_name: String(pData.name),
+                    current_qty: Number(newQty),
+                    min_threshold: Number(pData.minThreshold)
+                };
+                
+                emailjs.send(EMAIL_SERVICE, EMAIL_TEMPLATE, params)
+                    .then(() => console.log("E-mail disparado."))
+                    .catch(err => alert("Erro ao enviar e-mail. Verifique se as tags {{product_name}}, {{current_qty}} e {{min_threshold}} estão corretas no seu painel."));
             }
             ui.closeModal('move');
         } catch (err) { alert(err.message); }
@@ -166,8 +169,8 @@ const app = {
         snap.forEach(doc => {
             tbody.innerHTML += `<tr><td>${doc.id}</td><td><strong>${doc.data().funcao}</strong></td><td>
                 <select onchange="app.updateUserRole('${doc.id}', this.value)" style="padding:4px; border-radius:6px;">
-                    <option value="">Mudar...</option>
-                    <option value="admin">Admin</option>
+                    <option value="">Escolher...</option>
+                    <option value="admin">Administrador</option>
                     <option value="colaborador">Colaborador</option>
                     <option value="pendente">Bloquear</option>
                 </select>
@@ -185,39 +188,45 @@ const app = {
         document.getElementById('history-name').innerText = `Análise: ${name}`;
         ui.openModal('history');
         const trintaDias = new Date(); trintaDias.setDate(trintaDias.getDate() - 30);
-        const snap = await db.collection('historico').where('productId', '==', pid).where('timestamp', '>=', trintaDias).orderBy('timestamp', 'desc').get();
-        const logs = []; snap.forEach(doc => logs.push(doc.data()));
         
-        const calc = (d) => {
-            const limit = new Date().getTime() - (d * 24 * 60 * 60 * 1000);
-            const sum = logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate().getTime() >= limit).reduce((s,c)=>s+c.qty, 0);
-            return (sum / d).toFixed(1);
-        };
+        setTimeout(async () => {
+            const snap = await db.collection('historico').where('productId', '==', pid).where('timestamp', '>=', trintaDias).orderBy('timestamp', 'desc').get();
+            const logs = []; snap.forEach(doc => logs.push(doc.data()));
+            
+            const calc = (d) => {
+                const limit = new Date().getTime() - (d * 24 * 60 * 60 * 1000);
+                const sum = logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate().getTime() >= limit).reduce((s,c)=>s+c.qty, 0);
+                return (sum / d).toFixed(1);
+            };
 
-        document.getElementById('avg-7').innerText = calc(7);
-        document.getElementById('avg-30').innerText = calc(30);
-        
-        this.renderChart(logs);
-        document.getElementById('history-content').innerHTML = logs.map(l => `
-            <div class="log-item">
-                <span style="color:${l.type === 'ENTRADA' ? 'var(--success)' : 'var(--warning)'}; font-weight:700">${l.type} ${l.qty}un</span>
-                - ${l.sector || 'Estoque'} | <small>${l.employee}</small>
-            </div>`).join('');
+            document.getElementById('avg-7').innerText = calc(7);
+            document.getElementById('avg-30').innerText = calc(30);
+            
+            this.renderChart(logs);
+            document.getElementById('history-content').innerHTML = logs.map(l => `
+                <div class="log-item">
+                    <span style="color:${l.type === 'ENTRADA' ? 'var(--success)' : 'var(--warning)'}; font-weight:700">${l.type} ${l.qty}un</span>
+                    - ${l.sector} | <small>${l.employee}</small>
+                </div>`).join('');
+        }, 400);
     },
 
     renderChart(logs) {
         const ctx = document.getElementById('usageChart').getContext('2d');
         if (myChart) myChart.destroy();
-        const dias = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - i); return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); }).reverse();
+        const dias = [...Array(7)].map((_, i) => { 
+            const d = new Date(); d.setDate(d.getDate() - i); 
+            return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}); 
+        }).reverse();
         const dados = dias.map(dia => logs.filter(l => l.type === 'SAIDA' && l.timestamp.toDate().toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) === dia).reduce((s,c)=>s+c.qty, 0));
         
         myChart = new Chart(ctx, { 
             type: 'line', 
             data: { 
                 labels: dias, 
-                datasets: [{ label: 'Consumo', data: dados, borderColor: '#4f46e5', tension: 0.3, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.05)' }] 
+                datasets: [{ label: 'Saídas', data: dados, borderColor: '#4f46e5', tension: 0.3, fill: true, backgroundColor: 'rgba(79, 70, 229, 0.05)' }] 
             }, 
-            options: { responsive: true, maintainAspectRatio: false } 
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } 
         });
     }
 };

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster Pro v2.7 - Estável</title>
+    <title>LogMaster Pro v3.3 - Niterói</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     
@@ -16,22 +16,22 @@
 <body>
 
     <div id="auth-screen" class="modal-overlay">
-        <div class="modal-card auth-card">
+        <div class="modal-card auth-box">
             <div class="auth-header">
-                <span class="auth-emoji">🏢</span>
+                <span class="auth-icon">🏢</span>
                 <h2>LogMaster Pro</h2>
-                <p>Gestão de Estoque e Fluxo</p>
+                <p>Gestão de Fluxo e Estoque</p>
             </div>
             <form id="login-form">
                 <div class="field">
-                    <label>E-mail</label>
+                    <label>E-mail Corporativo</label>
                     <input type="email" id="login-email" required placeholder="exemplo@dominio.com">
                 </div>
                 <div class="field">
-                    <label>Senha</label>
+                    <label>Senha de Acesso</label>
                     <input type="password" id="login-password" required placeholder="••••••">
                 </div>
-                <button type="submit" class="btn-primary full-width" id="btn-auth-submit">Acessar Painel</button>
+                <button type="submit" class="btn-primary full-width" id="btn-auth-submit">Entrar no Sistema</button>
                 <div class="auth-footer">
                     <a href="#" onclick="ui.toggleAuthMode()" id="auth-toggle">Novo por aqui? Criar conta</a>
                 </div>
@@ -43,7 +43,7 @@
         <div class="container header-inner">
             <div class="logo">
                 <span class="logo-icon">🚚</span>
-                <span class="logo-text">LogMaster <small>v2.7</small></span>
+                <span class="logo-text">LogMaster <small>v3.3</small></span>
             </div>
             
             <div class="search-bar">
@@ -61,18 +61,15 @@
 
     <main class="container">
         <div id="pending-msg" class="alert-box hidden">
-            <div class="alert-icon">⏳</div>
-            <div class="alert-text">
-                <strong>Acesso Pendente:</strong> Sua conta está aguardando aprovação administrativa para visualizar o estoque.
-            </div>
+            <strong>Acesso Pendente:</strong> Sua conta aguarda aprovação administrativa do Jefferson.
         </div>
 
         <div id="main-content" class="content-card hidden">
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th width="60">Foto</th>
-                        <th>Descrição do Produto</th>
+                        <th width="70">Foto</th>
+                        <th>Produto</th>
                         <th>Categoria</th>
                         <th>Saldo</th>
                         <th class="text-right">Gerenciar</th>
@@ -86,12 +83,12 @@
     <div id="modal-users-mgmt" class="modal-overlay hidden">
         <div class="modal-card large">
             <div class="modal-header">
-                <h3>Permissões de Acesso</h3>
+                <h3>Gerenciar Permissões</h3>
                 <button class="close-x" onclick="ui.closeModal('users-mgmt')">&times;</button>
             </div>
             <div class="modal-body scrollable">
                 <table class="sub-table">
-                    <thead><tr><th>E-mail</th><th>Nível</th><th>Ação</th></tr></thead>
+                    <thead><tr><th>E-mail</th><th>Função</th><th>Mudar para...</th></tr></thead>
                     <tbody id="user-admin-list"></tbody>
                 </table>
             </div>
@@ -103,13 +100,13 @@
             <h2 id="modal-product-title">Detalhes do Item</h2>
             <form id="form-product">
                 <input type="hidden" id="p-edit-id">
-                <div class="field"><label>Nome</label><input type="text" id="p-name" required></div>
+                <div class="field"><label>Nome do Produto</label><input type="text" id="p-name" required></div>
                 <div class="field"><label>Categoria</label><input type="text" id="p-category" required></div>
-                <div class="field"><label>Limite para Alerta</label><input type="number" id="p-min" required></div>
+                <div class="field"><label>Estoque Mínimo</label><input type="number" id="p-min" required></div>
                 <div class="field"><label>Foto</label><input type="file" onchange="app.handleImage(this)"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn-link" onclick="ui.closeModal('product')">Voltar</button>
-                    <button type="submit" class="btn-primary">Salvar Registro</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
                 </div>
             </form>
         </div>
@@ -135,23 +132,19 @@
     <div id="modal-history" class="modal-overlay hidden">
         <div class="modal-card large">
             <div class="modal-header">
-                <h2 id="history-name">Análise de Consumo</h2>
+                <h2 id="history-name">Análise</h2>
                 <button class="close-x" onclick="ui.closeModal('history')">&times;</button>
             </div>
-            
-            <div class="analysis-layout">
-                <div class="chart-container">
-                    <canvas id="usageChart"></canvas>
-                </div>
-                <div class="kpi-sidebar">
+            <div class="analysis-grid">
+                <div class="chart-wrapper"><canvas id="usageChart"></canvas></div>
+                <div class="kpi-panel">
                     <div class="kpi-card"><span>Média 7d</span><strong id="avg-7">0</strong></div>
                     <div class="kpi-card"><span>Média 30d</span><strong id="avg-30">0</strong></div>
                 </div>
             </div>
-
-            <div class="history-list-container">
+            <div class="log-container">
                 <h4>Logs Recentes</h4>
-                <div id="history-content" class="history-feed"></div>
+                <div id="history-content" class="log-feed"></div>
             </div>
         </div>
     </div>
