@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Churras, Sol & Alegria - Convite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Poppins:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #1a1a1a;
+            /* Link convertido para acesso direto do Google Drive */
+            background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://lh3.googleusercontent.com/u/0/d/1f6UuXTcC20R6gkgIcOl3mkVUxJMG0zGo=w1000?authuser=0');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 380px;
+            height: 780px;
+            /* Imagem de fundo do convite atualizada com o link do Drive */
+            background-image: url('https://lh3.googleusercontent.com/u/0/d/1f6UuXTcC20R6gkgIcOl3mkVUxJMG0zGo=w1000?authuser=0');
+            background-size: cover;
+            background-position: center;
+            border: 12px solid #222;
+            border-radius: 3.5rem;
+            box-shadow: 0 50px 100px -20px rgba(0,0,0,0.9);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Overlay dinâmico para garantir que os textos flutuem com leitura */
+        .content-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, 
+                rgba(0,0,0,0.2) 0%, 
+                rgba(0,0,0,0.1) 30%, 
+                rgba(0,0,0,0.5) 60%, 
+                rgba(0,0,0,0.95) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 2.5rem 1.5rem;
+        }
+
+        .title-font {
+            font-family: 'Luckiest Guy', cursive;
+            letter-spacing: 2px;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.9);
+        }
+
+        .info-pill {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 1.5rem;
+        }
+
+        .btn-action {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-action:active {
+            transform: scale(0.96);
+        }
+
+        /* Notch superior do telemóvel */
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 28px;
+            background: #222;
+            border-bottom-left-radius: 1.5rem;
+            border-bottom-right-radius: 1.5rem;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-container">
+        <div class="notch"></div>
+
+        <div class="content-overlay">
+            
+            <!-- Título Principal -->
+            <div class="mb-auto mt-6 text-center">
+                <h1 class="text-white text-5xl title-font uppercase leading-tight drop-shadow-2xl">Churras, Sol <br>& Alegria!</h1>
+                <div class="inline-block bg-yellow-400 text-black px-3 py-1 rounded-full font-black text-[9px] tracking-[0.3em] uppercase mt-3">
+                    Pool Party & Futebol
+                </div>
+            </div>
+
+            <!-- Bloco de Informações -->
+            <div class="space-y-4">
+                
+                <p class="text-white/95 text-center font-medium italic text-sm mb-6 drop-shadow-md">
+                    "O clima está perfeito e a brasa já está no ponto. <br>Só faltas tu!"
+                </p>
+
+                <!-- Data e Hora -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="info-pill p-4 text-center">
+                        <p class="text-[9px] text-yellow-400 uppercase font-black tracking-widest mb-1">Data</p>
+                        <p class="text-white font-bold text-base">11 ABR 2026</p>
+                    </div>
+                    <div class="info-pill p-4 text-center">
+                        <p class="text-[9px] text-yellow-400 uppercase font-black tracking-widest mb-1">Horário</p>
+                        <p class="text-white font-bold text-base">08h às 16h</p>
+                    </div>
+                </div>
+
+                <!-- Localização -->
+                <div class="info-pill p-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-red-500 bg-white/10 p-2.5 rounded-xl">
+                            <i class="fas fa-map-marker-alt text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="text-[9px] text-white/50 uppercase font-bold tracking-wider">Local da Festa</p>
+                            <p class="text-xs text-white font-bold leading-tight">
+                                Rua das Flores - Caluge, Itaboraí - RJ
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ações Interativas -->
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <a id="btnWhatsApp" href="#" target="_blank" class="bg-[#25D366] text-white text-[11px] font-black py-4 rounded-2xl text-center shadow-xl btn-action flex items-center justify-center space-x-2 uppercase">
+                        <i class="fab fa-whatsapp text-xl"></i>
+                        <span>Confirmar</span>
+                    </a>
+                    <a id="btnMapa" href="#" target="_blank" class="bg-[#4285F4] text-white text-[11px] font-black py-4 rounded-2xl text-center shadow-xl btn-action flex items-center justify-center space-x-2 uppercase">
+                        <i class="fas fa-location-arrow text-lg"></i>
+                        <span>Como Ir</span>
+                    </a>
+                </div>
+
+                <!-- Botão de Destaque Inferior -->
+                <div class="pt-2">
+                    <button class="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-[0.2em] shadow-lg shadow-orange-900/20 btn-action">
+                        Vais perder esta resenha?
+                    </button>
+                </div>
+
+                <!-- Prazo de Confirmação -->
+                <div class="flex items-center justify-center space-x-2 py-2">
+                    <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                    <p class="text-[10px] text-white/70 font-bold uppercase tracking-widest">
+                        Responder até 20/03/2026
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            // Definições de contacto e localização
+            const telefone = "5521997174560";
+            const mensagem = "Opa! Confirmadíssimo para o Churras, Sol e Alegria no dia 11/04. Pode contar comigo pro futebol e pro pão de alho! 🥩🚀";
+            const endereco = "Rua das Flores - Caluge, Itaboraí - RJ, 24808-544";
+
+            // Atribuição de links dinâmicos
+            document.getElementById('btnWhatsApp').href = `https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(mensagem)}`;
+            document.getElementById('btnMapa').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
+        };
+    </script>
+</body>
+</html>
