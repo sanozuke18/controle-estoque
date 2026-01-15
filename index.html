@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster Pro v14.3 - SEMOBI Niterói</title>
+    <title>LogMaster Pro v17.6 - SEMOBI Niterói</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- CSS principal do sistema -->
     <link rel="stylesheet" href="style.css">
 
-    <!-- Bibliotecas externas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -20,7 +17,6 @@
 </head>
 <body id="app-body">
 
-    <!-- ===================== TELA DE LOGIN ===================== -->
     <div id="login-screen" class="login-overlay">
         <div class="login-container">
             <div class="login-header">
@@ -48,14 +44,12 @@
         </div>
     </div>
 
-    <!-- Tela de carregamento -->
     <div id="loading-screen">
         <div style="font-size: 3rem;">🚚</div>
-        <div style="font-weight: 800; color: #4f46e5; margin-top: 20px;">LogMaster Pro v14.3</div>
+        <div style="font-weight: 800; color: #4f46e5; margin-top: 20px;">LogMaster Pro v17.6</div>
         <div style="color: #64748b; font-size: 14px;">Carregando sistema SEMOBI...</div>
     </div>
 
-    <!-- ===================== CABEÇALHO ===================== -->
     <header class="header">
         <div class="container header-inner">
             <div class="logo">🚚 LogMaster <span>Pro</span></div>
@@ -69,7 +63,6 @@
             <div class="header-right">
                 <button class="btn-theme" onclick="ui.toggleDarkMode()">🌓</button>
 
-                <!-- Usuário logado -->
                 <div class="user-badge" id="logged-user-badge">
                     <span id="logged-user-name">---</span>
                     <span class="user-role" id="logged-user-role">---</span>
@@ -79,10 +72,8 @@
         </div>
     </header>
 
-    <!-- ===================== CONTEÚDO PRINCIPAL ===================== -->
     <main class="container main-content">
         
-        <!-- ===== ABA ESTOQUE ===== -->
         <section id="view-inventory" class="view-sec">
             <div class="header-tools-modern">
                 <div class="search-wrapper">
@@ -107,7 +98,6 @@
             </div>
         </section>
 
-        <!-- ===== ABA COMPRAS ===== -->
         <section id="view-shopping" class="view-sec hidden">
             <div class="view-header">
                 <h3>🛒 Inteligência Preditiva de Reposição</h3>
@@ -128,12 +118,10 @@
             </div>
         </section>
 
-        <!-- ===== ABA GESTÃO ===== -->
         <section id="view-admin" class="view-sec hidden">
             <div class="admin-grid">
 
                 <div class="admin-main">
-                    <!-- Monitoramento de alertas -->
                     <div class="dashboard-card">
                         <h4>⏳ Monitoramento de Alertas Críticos</h4>
                         <p style="font-size: 11px; color: #64748b; margin-bottom: 15px;">
@@ -153,7 +141,6 @@
                         </div>
                     </div>
 
-                    <!-- Gráfico de categorias -->
                     <div class="dashboard-card">
                         <h4>📊 Saídas por Categoria (Últimos 15 dias)</h4>
                         <div class="chart-box" style="position: relative; height: 300px;">
@@ -161,8 +148,7 @@
                         </div>
                     </div>
 
-                    <!-- Gerenciamento de usuários -->
-                    <div class="users-section" id="users-management">
+                    <div class="users-section dashboard-card" id="users-management">
                         <h3>👥 Gerenciamento de Usuários</h3>
                         
                         <div class="user-form-inline">
@@ -176,19 +162,21 @@
                             <button class="btn-primary" onclick="auth.createUser()">+ Criar Usuário</button>
                         </div>
                         
-                        <table class="minimal-table">
-                            <thead>
-                                <tr>
-                                    <th>Usuário</th>
-                                    <th>Nível de Acesso</th>
-                                    <th>Criado em</th>
-                                    <th class="text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-list">
-                                <tr><td colspan="4" class="text-center">Carregando...</td></tr>
-                            </tbody>
-                        </table>
+                        <div class="table-scroll-container">
+                            <table class="minimal-table">
+                                <thead>
+                                    <tr>
+                                        <th>Usuário</th>
+                                        <th>Nível de Acesso</th>
+                                        <th>Criado em</th>
+                                        <th class="text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-list">
+                                    <tr><td colspan="4" class="text-center">Carregando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -229,22 +217,19 @@
         </section>
     </main>
 
-    <!-- ===================== RODAPÉ ===================== -->
     <footer class="footer-copyright">
         <div class="container">
             <p>&copy; 2025 SEMOBI Niterói - LogMaster Pro. Todos os direitos reservados. Uso exclusivo interno.</p>
         </div>
     </footer>
 
-    <!-- ===================== MODAIS ===================== -->
-
-    <!-- Modal Histórico / Análise -->
     <div id="modal-history" class="modal-overlay hidden">
         <div class="modal-card-floating large">
             <div class="modal-header">
                 <h3 id="history-header">Análise de Fluxo do Produto</h3>
                 <button class="close-btn-header" onclick="ui.closeModal('history')">&times;</button>
             </div>
+            
             <div class="analysis-wrapper">
                 <div class="analysis-main">
                     <div class="kpi-row">
@@ -262,14 +247,14 @@
                         </div>
                     </div>
 
-                    <div class="chart-canvas-container" style="position: relative; height: 260px;">
+                    <div class="chart-canvas-container" style="position: relative; height: 240px;">
                         <canvas id="usageChart"></canvas>
                     </div>
 
                     <div class="log-section">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                             <h4 id="log-title">Histórico de Movimentações</h4>
-                            <button onclick="app.filterHistory(15)" class="btn-outline-small">Limpar Filtro de Data</button>
+                            <button onclick="app.filterHistory(15)" class="btn-outline-small">Resetar Filtro</button>
                         </div>
                         <div class="log-table-wrapper">
                             <table class="minimal-table">
@@ -289,14 +274,13 @@
 
                 <aside class="analysis-sidebar">
                     <h4>📅 Calendário de Uso</h4>
-                    <p style="font-size:10px; color:#64748b; margin-bottom:12px;">Clique nos dias destacados (azul) para filtrar os registros.</p>
+                    <p style="font-size:10px; color:#64748b; margin-bottom:12px;">Clique na data para filtrar.</p>
                     <div id="calendar-root" class="calendar-widget"></div>
                 </aside>
             </div>
         </div>
     </div>
 
-    <!-- Modal Produto -->
     <div id="modal-product" class="modal-overlay hidden">
         <div class="modal-card-floating">
             <div class="modal-header">
@@ -329,7 +313,6 @@
         </div>
     </div>
 
-    <!-- Modal Movimentação -->
     <div id="modal-move" class="modal-overlay hidden">
         <div class="modal-card-floating small">
             <div class="modal-header">
@@ -361,7 +344,6 @@
         </div>
     </div>
 
-    <!-- Modal Categorias -->
     <div id="modal-categories" class="modal-overlay hidden">
         <div class="modal-card-floating">
             <div class="modal-header">
@@ -385,7 +367,6 @@
         </div>
     </div>
 
-    <!-- Modal Auditoria -->
     <div id="modal-audit" class="modal-overlay hidden">
         <div class="modal-card-floating large">
             <div class="modal-header">
@@ -408,12 +389,10 @@
         </div>
     </div>
 
-    <!-- Template oculto para PDF -->
     <div id="pdf-template" style="display:none; padding:40px; background:white; color:black;">
         <div id="pdf-content"></div>
     </div>
 
-    <!-- JS principal -->
     <script src="script.js"></script>
 </body>
 </html>

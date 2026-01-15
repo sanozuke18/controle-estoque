@@ -1,6 +1,5 @@
 /* =================================================================
-   LOGMASTER PRO v14.3 - SISTEMA DE GESTÃO DE ESTOQUE SEMOBI
-   + MÓDULO DE AUTENTICAÇÃO E PERMISSÕES
+   LOGMASTER PRO v17.6 - SCRIPT INTEGRAL (SEM CORTES)
 ================================================================= */
 
 // Configuração do Firebase
@@ -33,11 +32,10 @@ let currentViewedLogs = [];
 let calendarDate = new Date();
 let currentPhotoBase64 = "";
 let sessionManualAlerts = {};
+let currentUser = null;
 const MASTER_KEY = "1234";
 
 /* ===================== SISTEMA DE AUTENTICAÇÃO E PERMISSÕES ===================== */
-
-let currentUser = null;
 
 const PERMISSIONS = {
     admin: {
@@ -510,6 +508,7 @@ const app = {
 
                 currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
                 status.innerText = "✅ Imagem pronta para envio!";
+                console.log("Imagem compactada com sucesso.");
             };
             img.onerror = () => {
                 status.innerText = "Erro ao processar imagem.";
@@ -723,8 +722,7 @@ const app = {
         if(element) element.style.background = "var(--success)";
         
         const targetDateStr = new Date(year, month, day).toLocaleDateString('pt-BR');
-        const titleEl = document.getElementById('log-title');
-        if (titleEl) titleEl.innerText = `Movimentações em ${targetDateStr}`;
+        document.getElementById('log-title').innerText = `Movimentações em ${targetDateStr}`;
         
         const filtered = currentViewedLogs.filter(l => {
             if(!l.timestamp) return false;
@@ -1160,6 +1158,7 @@ const app = {
             categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
     },
 
+    /* --- CORREÇÃO: EXPORTAÇÃO EXCEL BRASILEIRO (v16.2/v17.3) --- */
     exportCSV() {
         if (!auth.can('exportReports')) {
             return alert('Você não tem permissão para exportar relatórios.');
@@ -1167,20 +1166,25 @@ const app = {
 
         if (fullInventory.length === 0) return alert("Nada para exportar.");
         
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "ID do Produto,Nome,Categoria,Saldo Atual,Estoque Minimo,Status\n";
+        // Cabeçalho com separador ";" para Excel Brasileiro
+        let csvContent = "ID do Produto;Nome;Categoria;Saldo Atual;Estoque Minimo;Status\n";
         
         fullInventory.forEach(p => {
             const status = Number(p.qty) <= Number(p.minThreshold) ? "CRITICO" : "OK";
-            const escapedName = p.name.replace(/"/g, '""');
-            csvContent += `"${p.id}","${escapedName}","${p.category}",${p.qty},${p.minThreshold},"${status}"\n`;
+            const escapedName = p.name.replace(/;/g, ','); // Limpa ; do nome para não quebrar colunas
+            // Montagem da linha com ";" e aspas para segurança
+            csvContent += `"${p.id}";"${escapedName}";"${p.category || 'N/A'}";${p.qty};${p.minThreshold};"${status}"\n`;
         });
-        
-        const encodedUri = encodeURI(csvContent);
+
+        // BLOCO CRÍTICO: Inserção de \uFEFF para forçar UTF-8 no Excel (Fix Acentos)
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
+        
+        // Nome do arquivo com data
         const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-        link.setAttribute("download", `Estoque_SEMOBI_${dateStr}.csv`);
+        link.href = URL.createObjectURL(blob);
+        link.download = `Estoque_SEMOBI_${dateStr}.csv`;
+        
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
