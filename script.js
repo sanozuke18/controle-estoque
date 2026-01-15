@@ -1,10 +1,9 @@
 /* =================================================================
    LOGMASTER PRO v14.3 - SISTEMA DE GESTÃO DE ESTOQUE SEMOBI
-   - Recursos: Firebase Firestore/Auth, Chart.js, EmailJS, html2pdf
-   - Funcionalidades: Estoque Real-time, Predição, Alertas, Auditoria
+   + MÓDULO DE AUTENTICAÇÃO E PERMISSÕES
 ================================================================= */
 
-// Configuração do Firebase (Substitua pelos seus dados reais se necessário)
+// Configuração do Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyD37ZAe9afx70HjjiGQzxbUkrhtYSqVVms",
     authDomain: "estoque-master-ba8d3.firebaseapp.com",
@@ -19,91 +18,395 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const fAuth = firebase.auth();
 
-// Configuração do EmailJS (Serviço de envio de e-mails)
+// Configuração do EmailJS
 const EMAILJS_PUBLIC_KEY = "Q0pklfvcpouN8CSjW";
 const EMAILJS_SERVICE_ID = "service_ip0xm56";
 const EMAILJS_TEMPLATE_ID = "template_04ocb0p";
 
-// Variáveis Globais de Estado
-let fullInventory = []; // Armazena todo o estoque localmente
-let myChart = null;     // Instância do gráfico de análise individual
-let adminChart15 = null; // Instância do gráfico de saídas mensais
-let categories = [];    // Lista de categorias fixas
-let alertConfig = { email: "" }; // Configuração de e-mail destinatário
-let currentViewedLogs = []; // Logs do produto sendo visualizado no momento
-let calendarDate = new Date(); // Data base para o calendário
-let currentPhotoBase64 = ""; // Armazena temporariamente a imagem compactada
-let sessionManualAlerts = {}; // Controle de sessão para disparos manuais de alerta
-const MASTER_KEY = "1234"; // Senha mestra para operações críticas (ex: deletar)
+// Variáveis de Estado
+let fullInventory = [];
+let myChart = null;
+let adminChart15 = null;
+let categories = [];
+let alertConfig = { email: "" };
+let currentViewedLogs = [];
+let calendarDate = new Date();
+let currentPhotoBase64 = "";
+let sessionManualAlerts = {};
+const MASTER_KEY = "1234";
 
-// Inicialização do Sistema ao Carregar a Página
-window.onload = async () => {
-    try {
-        // Inicializa EmailJS
-        emailjs.init(EMAILJS_PUBLIC_KEY);
-        
-        // Autenticação Anônima no Firebase (Necessária para regras de segurança)
-        await fAuth.signInAnonymously();
-        console.log("Conectado ao Firebase com sucesso.");
-        
-        // Remove a tela de carregamento
-        document.getElementById('loading-screen').classList.add('hidden');
-        
-        // Inicia os ouvintes do banco de dados
-        app.init();
-    } catch (e) {
-        console.error("Erro crítico na inicialização:", e);
-        alert("Falha ao conectar com o servidor. Verifique sua internet.");
+/* ===================== SISTEMA DE AUTENTICAÇÃO E PERMISSÕES ===================== */
+
+let currentUser = null;
+
+const PERMISSIONS = {
+    admin: {
+        label: 'Administrador',
+        viewStock: true,
+        moveStock: true,
+        createProduct: true,
+        editProduct: true,
+        deleteProduct: true,
+        viewShopping: true,
+        viewAdmin: true,
+        manageUsers: true,
+        manageCategories: true,
+        exportReports: true
+    },
+    supervisor: {
+        label: 'Supervisor',
+        viewStock: true,
+        moveStock: true,
+        createProduct: true,
+        editProduct: false,
+        deleteProduct: false,
+        viewShopping: true,
+        viewAdmin: false,
+        manageUsers: false,
+        manageCategories: true,
+        exportReports: true
+    },
+    operador: {
+        label: 'Operador',
+        viewStock: true,
+        moveStock: true,
+        createProduct: false,
+        editProduct: false,
+        deleteProduct: false,
+        viewShopping: false,
+        viewAdmin: false,
+        manageUsers: false,
+        manageCategories: false,
+        exportReports: false
     }
 };
 
-// Objeto Principal da Aplicação
-const app = {
-    // Configura os Listeners (Ouvintes) em Tempo Real do Firestore
+const auth = {
     init() {
-        // 1. Ouvinte de Configuração de Alertas
+        db.collection('usuarios').orderBy('createdAt', 'desc').onSnapshot(snap => {
+            const users = [];
+            snap.forEach(doc => users.push({ id: doc.id, ...doc.data() }));
+            this.renderUsersList(users);
+        });
+    },
+
+    async ensureDefaultAdmin() {
+        const adminDoc = await db.collection('usuarios').doc('admin').get();
+        if (!adminDoc.exists) {
+            await db.collection('usuarios').doc('admin').set({
+                username: 'admin',
+                password: this.hashPassword('admin123'),
+                role: 'admin',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                isDefault: true
+            });
+            console.log('Usuário admin padrão criado.');
+        }
+    },
+
+    hashPassword(pass) {
+        let hash = 0;
+        for (let i = 0; i < pass.length; i++) {
+            const char = pass.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return 'hash_' + Math.abs(hash).toString(16);
+    },
+
+    async login(e) {
+        e.preventDefault();
+        const username = document.getElementById('login-user').value.trim().toLowerCase();
+        const password = document.getElementById('login-pass').value;
+        const errorEl = document.getElementById('login-error');
+        
+        errorEl.textContent = '';
+
+        try {
+            const userDoc = await db.collection('usuarios').doc(username).get();
+            
+            if (!userDoc.exists) {
+                errorEl.textContent = 'Usuário não encontrado.';
+                return;
+            }
+
+            const userData = userDoc.data();
+            const hashedInput = this.hashPassword(password);
+
+            if (userData.password !== hashedInput) {
+                errorEl.textContent = 'Senha incorreta.';
+                return;
+            }
+
+            currentUser = {
+                id: userDoc.id,
+                username: userData.username,
+                role: userData.role,
+                permissions: PERMISSIONS[userData.role]
+            };
+
+            localStorage.setItem('logmaster_session', JSON.stringify({
+                id: currentUser.id,
+                role: currentUser.role
+            }));
+
+            document.getElementById('login-screen').classList.add('hidden');
+            this.updateUI();
+            this.applyPermissions();
+
+            // Inicia app e lista de usuários
+            app.init();
+            this.init();
+
+        } catch (error) {
+            console.error('Erro no login:', error);
+            errorEl.textContent = 'Erro ao conectar. Tente novamente.';
+        }
+    },
+
+    async checkSession() {
+        const session = localStorage.getItem('logmaster_session');
+        if (session) {
+            try {
+                const { id } = JSON.parse(session);
+                const userDoc = await db.collection('usuarios').doc(id).get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    currentUser = {
+                        id: userDoc.id,
+                        username: userData.username,
+                        role: userData.role,
+                        permissions: PERMISSIONS[userData.role]
+                    };
+                    document.getElementById('login-screen').classList.add('hidden');
+                    this.updateUI();
+                    this.applyPermissions();
+                    app.init();
+                    this.init();
+                    return true;
+                }
+            } catch (e) {
+                console.error('Sessão inválida:', e);
+            }
+        }
+        document.getElementById('login-screen').classList.remove('hidden');
+        return false;
+    },
+
+    logout() {
+        if (confirm('Deseja realmente sair do sistema?')) {
+            localStorage.removeItem('logmaster_session');
+            currentUser = null;
+            location.reload();
+        }
+    },
+
+    updateUI() {
+        if (!currentUser) return;
+        document.getElementById('logged-user-name').textContent = currentUser.username;
+        const roleEl = document.getElementById('logged-user-role');
+        roleEl.textContent = currentUser.permissions.label;
+        roleEl.className = 'user-role';
+        
+        if (currentUser.role === 'supervisor') {
+            roleEl.classList.add('role-supervisor');
+        } else if (currentUser.role === 'operador') {
+            roleEl.classList.add('role-operador');
+        }
+    },
+
+    applyPermissions() {
+        if (!currentUser) return;
+        const p = currentUser.permissions;
+
+        const tabShopping = document.querySelector('[onclick*="switchView(\'shopping\')"]');
+        if (tabShopping) tabShopping.classList.toggle('permission-hidden', !p.viewShopping);
+
+        const tabAdmin = document.querySelector('[onclick*="switchView(\'admin\')"]');
+        if (tabAdmin) tabAdmin.classList.toggle('permission-hidden', !p.viewAdmin);
+
+        const btnAddProduct = document.querySelector('[onclick*="openAddModal"]');
+        if (btnAddProduct) btnAddProduct.classList.toggle('permission-hidden', !p.createProduct);
+
+        const btnCategories = document.querySelector('[onclick*="openModal(\'categories\')"]');
+        if (btnCategories) btnCategories.classList.toggle('permission-hidden', !p.manageCategories);
+
+        document.querySelectorAll('[onclick*="exportCSV"], [onclick*="generatePDF"]').forEach(btn => {
+            btn.classList.toggle('permission-hidden', !p.exportReports);
+        });
+
+        // Gestão de usuários: oculta seção se não for admin
+        const usersSection = document.getElementById('users-management');
+        if (usersSection) {
+            usersSection.classList.toggle('permission-hidden', !p.manageUsers);
+        }
+    },
+
+    can(permission) {
+        if (!currentUser) return false;
+        return currentUser.permissions[permission] === true;
+    },
+
+    async createUser() {
+        if (!this.can('manageUsers')) {
+            return alert('Você não tem permissão para criar usuários.');
+        }
+
+        const username = document.getElementById('new-user-name').value.trim().toLowerCase();
+        const password = document.getElementById('new-user-pass').value;
+        const role = document.getElementById('new-user-role').value;
+
+        if (!username || !password) {
+            return alert('Preencha usuário e senha.');
+        }
+
+        if (username.length < 3) {
+            return alert('Usuário deve ter pelo menos 3 caracteres.');
+        }
+
+        if (password.length < 4) {
+            return alert('Senha deve ter pelo menos 4 caracteres.');
+        }
+
+        const existing = await db.collection('usuarios').doc(username).get();
+        if (existing.exists) {
+            return alert('Este nome de usuário já existe.');
+        }
+
+        try {
+            await db.collection('usuarios').doc(username).set({
+                username: username,
+                password: this.hashPassword(password),
+                role: role,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser.username
+            });
+
+            document.getElementById('new-user-name').value = '';
+            document.getElementById('new-user-pass').value = '';
+            alert('Usuário criado com sucesso!');
+        } catch (error) {
+            console.error('Erro ao criar usuário:', error);
+            alert('Erro ao criar usuário.');
+        }
+    },
+
+    async deleteUser(userId) {
+        if (!this.can('manageUsers')) {
+            return alert('Você não tem permissão.');
+        }
+
+        if (userId === 'admin') {
+            return alert('O usuário admin padrão não pode ser excluído.');
+        }
+
+        if (userId === currentUser.id) {
+            return alert('Você não pode excluir seu próprio usuário.');
+        }
+
+        if (confirm(`Excluir o usuário "${userId}"?`)) {
+            try {
+                await db.collection('usuarios').doc(userId).delete();
+                alert('Usuário excluído.');
+            } catch (e) {
+                alert('Erro ao excluir.');
+            }
+        }
+    },
+
+    async resetPassword(userId) {
+        if (!this.can('manageUsers')) return;
+
+        const newPass = prompt(`Digite a nova senha para "${userId}":`);
+        if (!newPass || newPass.length < 4) {
+            return alert('Senha deve ter pelo menos 4 caracteres.');
+        }
+
+        try {
+            await db.collection('usuarios').doc(userId).update({
+                password: this.hashPassword(newPass)
+            });
+            alert('Senha alterada com sucesso!');
+        } catch (e) {
+            alert('Erro ao alterar senha.');
+        }
+    },
+
+    renderUsersList(users) {
+        const tbody = document.getElementById('users-list');
+        if (!tbody) return;
+
+        if (users.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhum usuário cadastrado.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = users.map(u => {
+            const roleLabel = PERMISSIONS[u.role]?.label || u.role;
+            const createdAt = u.createdAt ? u.createdAt.toDate().toLocaleDateString('pt-BR') : '-';
+            const isDefault = u.isDefault ? ' (padrão)' : '';
+            
+            return `
+                <tr>
+                    <td><strong>${u.username}</strong>${isDefault}</td>
+                    <td>
+                        <span class="user-role ${u.role === 'supervisor' ? 'role-supervisor' : ''} ${u.role === 'operador' ? 'role-operador' : ''}" style="display:inline-block;">
+                            ${roleLabel}
+                        </span>
+                    </td>
+                    <td>${createdAt}</td>
+                    <td class="text-right">
+                        <button class="btn-outline-small" onclick="auth.resetPassword('${u.id}')">🔑 Resetar</button>
+                        <button class="btn-outline-small" style="color:var(--danger); border-color:var(--danger);" onclick="auth.deleteUser('${u.id}')" ${u.isDefault ? 'disabled style="opacity:0.5;"' : ''}>🗑️</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+};
+
+/* ===================== APP PRINCIPAL (SEU CÓDIGO ORIGINAL) ===================== */
+
+const app = {
+    init() {
         db.collection('config').doc('alerts').onSnapshot(doc => {
             if (doc.exists()) {
                 alertConfig = doc.data();
-                document.getElementById('alert-email-input').value = alertConfig.email || "";
+                const input = document.getElementById('alert-email-input');
+                if (input) input.value = alertConfig.email || "";
             }
         });
 
-        // 2. Ouvinte Principal de Produtos (Estoque)
         db.collection('produtos').orderBy('name').onSnapshot(snap => {
             fullInventory = [];
             snap.forEach(doc => fullInventory.push({ id: doc.id, ...doc.data() }));
             
-            // Atualiza as interfaces dependentes dos dados de produtos
-            this.renderProducts(fullInventory); // Tabela de Estoque
-            this.renderShoppingList(fullInventory); // Tabela de Compras/Predição
-            this.renderAlertCountdown(); // Monitor de Alertas na Gestão
-            this.checkTenDayAlerts(); // Verificação automática de alertas de 10 dias
+            this.renderProducts(fullInventory);
+            this.renderShoppingList(fullInventory);
+            this.renderAlertCountdown();
+            this.checkTenDayAlerts();
             
-            // Se a aba de gestão estiver visível, atualiza o gráfico de saídas
-            if (!document.getElementById('view-admin').classList.contains('hidden')) {
+            const adminView = document.getElementById('view-admin');
+            if (adminView && !adminView.classList.contains('hidden')) {
                 this.showCategorySummaries();
             }
         }, error => {
             console.error("Erro ao buscar produtos:", error);
         });
 
-        // 3. Ouvinte de Categorias
         db.collection('categorias').orderBy('name').onSnapshot(snap => {
             categories = [];
             snap.forEach(doc => categories.push({ id: doc.id, ...doc.data() }));
-            this.renderCategoriesList(); // Lista no modal de categorias
-            this.populateCategorySelect(); // Dropdown nos formulários
+            this.renderCategoriesList();
+            this.populateCategorySelect();
         });
     },
 
-    /* ================= FUNÇÕES DE PRODUTO (CADASTRO/EDIÇÃO) ================= */
-
-    // Processa o formulário de produto (Novo ou Edição)
     async handleProductSubmit(e) {
         e.preventDefault();
         
-        const id = document.getElementById('p-id').value; // Se tiver ID, é edição. Se não, é novo.
+        const id = document.getElementById('p-id').value;
         const name = document.getElementById('p-name').value.trim();
         const category = document.getElementById('p-category').value;
         const minThreshold = parseInt(document.getElementById('p-min').value);
@@ -116,21 +419,18 @@ const app = {
             name: name,
             category: category,
             minThreshold: minThreshold,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp() // Marca temporal do servidor
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        // Só adiciona a foto se uma nova foi carregada e compactada
         if (currentPhotoBase64) {
             data.photo = currentPhotoBase64;
         }
 
         try {
             if (id) {
-                // Modo Edição: Atualiza o documento existente
                 await db.collection('produtos').doc(id).update(data);
                 alert("Produto atualizado com sucesso!");
             } else {
-                // Modo Cadastro: Cria novo documento com saldo inicial zero
                 await db.collection('produtos').add({ ...data, qty: 0 });
                 alert("Novo insumo cadastrado!");
             }
@@ -141,52 +441,52 @@ const app = {
         }
     },
 
-    // Abre o modal para NOVO cadastro
     openAddModal() {
+        if (!auth.can('createProduct')) {
+            return alert('Você não tem permissão para cadastrar produtos.');
+        }
         document.getElementById('product-modal-title').innerText = "Novo Insumo";
-        document.getElementById('p-id').value = ""; // Limpa o ID para indicar novo cadastro
+        document.getElementById('p-id').value = "";
         document.getElementById('form-product').reset();
         document.getElementById('img-status').innerText = "Aguardando seleção de arquivo...";
-        currentPhotoBase64 = ""; // Reseta o cache de imagem
+        currentPhotoBase64 = "";
         ui.openModal('product');
     },
 
-    // Abre o modal para EDIÇÃO de um produto existente
     async openEditModal(id) {
-        // Solicita senha mestra para segurança
+        if (!auth.can('editProduct')) {
+            return alert('Você não tem permissão para editar produtos.');
+        }
+
         if (prompt("Digite a Senha Mestra para editar:") !== MASTER_KEY) return alert("Senha incorreta.");
         
         const p = fullInventory.find(i => i.id === id);
         if (!p) return alert("Produto não encontrado.");
 
         document.getElementById('product-modal-title').innerText = "Editar: " + p.name;
-        document.getElementById('p-id').value = id; // Define o ID para modo edição
+        document.getElementById('p-id').value = id;
         document.getElementById('p-name').value = p.name;
         document.getElementById('p-category').value = p.category || "";
         document.getElementById('p-min').value = p.minThreshold;
         
-        // Reseta o cache de nova imagem, mas indica se já existe uma no banco
         currentPhotoBase64 = "";
         document.getElementById('img-status').innerText = p.photo ? "✅ Imagem atual mantida (envie outra para substituir)." : "Nenhuma imagem cadastrada.";
         
         ui.openModal('product');
     },
 
-    // Fecha o modal de produto e limpa os estados
     closeProductModal() {
         currentPhotoBase64 = "";
         ui.closeModal('product');
         document.getElementById('form-product').reset();
     },
 
-    // Processamento e Compactação de Imagem (PNG/JPG) usando Canvas
     handleImage(input) {
         const file = input.files[0];
         const status = document.getElementById('img-status');
         
         if (!file) return;
 
-        // Validação de tipo MIME
         if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
             alert("Formato inválido. Use apenas PNG ou JPG.");
             input.value = "";
@@ -199,9 +499,8 @@ const app = {
         reader.onload = (e) => {
             const img = new Image();
             img.onload = () => {
-                // Cria um canvas para redimensionar a imagem
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 400; // Largura máxima definida para 400px
+                const MAX_WIDTH = 400;
                 const scaleSize = MAX_WIDTH / img.width;
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
@@ -209,10 +508,8 @@ const app = {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                // Converte o canvas para JPEG com 70% de qualidade (ótima compressão)
                 currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
                 status.innerText = "✅ Imagem pronta para envio!";
-                console.log("Imagem compactada com sucesso.");
             };
             img.onerror = () => {
                 status.innerText = "Erro ao processar imagem.";
@@ -223,8 +520,11 @@ const app = {
         reader.readAsDataURL(file);
     },
 
-    // Deleta um produto (protegido por senha mestra)
     async deleteItem(id, name) {
+        if (!auth.can('deleteProduct')) {
+            return alert('Você não tem permissão para excluir produtos.');
+        }
+
         if (confirm(`Tem certeza que deseja excluir o insumo "${name}"?`)) {
             if (prompt("Digite a Senha Mestra para confirmar a exclusão:") === MASTER_KEY) {
                 try {
@@ -239,10 +539,11 @@ const app = {
         }
     },
 
-    /* ================= FUNÇÕES DE MOVIMENTAÇÃO (ENTRADA/SAÍDA) ================= */
-
-    // Abre o modal de lançamento de estoque
     async openMove(id, type) {
+        if (!auth.can('moveStock')) {
+            return alert('Você não tem permissão para movimentar estoque.');
+        }
+
         const prod = fullInventory.find(i => i.id === id);
         if (!prod) return;
 
@@ -250,7 +551,6 @@ const app = {
         document.getElementById('move-type').value = type;
         document.getElementById('move-label').innerText = type === 'ENTRADA' ? `Repor: ${prod.name}` : `Retirar: ${prod.name}`;
         
-        // Mostra/oculta campos extras dependendo do tipo de operação
         const extraFields = document.getElementById('extra-fields');
         if (type === 'SAIDA') {
             extraFields.classList.remove('hidden');
@@ -263,10 +563,13 @@ const app = {
         ui.openModal('move');
     },
 
-    // Processa o lançamento de estoque
     async processMove(e) {
         e.preventDefault();
         
+        if (!auth.can('moveStock')) {
+            return alert('Você não tem permissão para movimentar estoque.');
+        }
+
         const id = document.getElementById('move-id').value;
         const type = document.getElementById('move-type').value;
         const qty = parseInt(document.getElementById('move-qty').value);
@@ -278,7 +581,6 @@ const app = {
         const ref = db.collection('produtos').doc(id);
         
         try {
-            // Transação para garantir atomicidade (leitura + escrita seguras)
             await db.runTransaction(async (transaction) => {
                 const doc = await transaction.get(ref);
                 if (!doc.exists) throw "Produto não existe!";
@@ -293,10 +595,8 @@ const app = {
                     newQty += qty;
                 }
 
-                // Atualiza o saldo do produto
                 transaction.update(ref, { qty: newQty });
 
-                // Registra o histórico na coleção 'historico'
                 const historyRef = db.collection('historico').doc();
                 transaction.set(historyRef, {
                     productId: id,
@@ -306,7 +606,7 @@ const app = {
                     qty: qty,
                     sector: type === 'SAIDA' ? (sector || 'N/A') : 'REPOSIÇÃO',
                     process: processNo || '-',
-                    employee: "Usuário LogMaster", // Pode ser substituído por auth real no futuro
+                    employee: currentUser ? currentUser.username : "Usuário LogMaster",
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
             });
@@ -321,11 +621,10 @@ const app = {
         }
     },
 
-    /* ================= FUNÇÕES DE VISUALIZAÇÃO E ANÁLISE ================= */
-
-    // Renderiza a tabela principal de estoque
     renderProducts(items) {
         const tbody = document.getElementById('stock-list');
+        if (!tbody) return;
+
         if (items.length === 0) {
             tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding: 20px; color: #64748b;'>Nenhum insumo encontrado.</td></tr>";
             return;
@@ -335,15 +634,16 @@ const app = {
             const min = Number(item.minThreshold) || 0;
             const qty = Number(item.qty) || 0;
             
-            // Define a classe CSS da linha baseada no nível de estoque
             let rowClass = '';
             if (qty <= min) {
-                rowClass = 'row-critical'; // Vermelho se abaixo ou igual ao mínimo
+                rowClass = 'row-critical';
             } else if (qty <= min * 1.5) {
-                rowClass = 'row-warning'; // Amarelo se próximo ao mínimo (margem de 50%)
+                rowClass = 'row-warning';
             }
 
-            // Renderiza a linha da tabela
+            const canEdit = auth.can('editProduct');
+            const canDelete = auth.can('deleteProduct');
+
             return `
                 <tr class="${rowClass}" onclick="app.showHistory('${item.id}', '${item.name}')" title="Clique para ver análise detalhada">
                     <td><img src="${item.photo || 'https://via.placeholder.com/50?text=Sem+Foto'}" class="img-thumb" alt="${item.name}"></td>
@@ -357,8 +657,8 @@ const app = {
                                 <button class="btn-capsule btn-out" onclick="app.openMove('${item.id}', 'SAIDA')">Retirar</button>
                             </div>
                             <div style="display:flex; gap:8px;">
-                                <button class="btn-icon" onclick="app.openEditModal('${item.id}')" title="Editar">✏️</button>
-                                <button class="btn-icon" style="color:var(--danger); border-color:var(--danger);" onclick="app.deleteItem('${item.id}', '${item.name}')" title="Excluir">🗑️</button>
+                                <button class="btn-icon ${!canEdit ? 'permission-hidden' : ''}" onclick="app.openEditModal('${item.id}')" title="Editar">✏️</button>
+                                <button class="btn-icon ${!canDelete ? 'permission-hidden' : ''}" style="color:var(--danger); border-color:var(--danger);" onclick="app.deleteItem('${item.id}', '${item.name}')" title="Excluir">🗑️</button>
                             </div>
                         </div>
                     </td>
@@ -367,10 +667,8 @@ const app = {
         }).join('');
     },
 
-    // Função de busca/filtro na tabela de estoque
     filter() {
         const term = document.getElementById('search-input').value.toLowerCase().trim();
-        // Filtra por nome ou categoria
         const filtered = fullInventory.filter(i => 
             i.name.toLowerCase().includes(term) || 
             (i.category || '').toLowerCase().includes(term)
@@ -378,14 +676,10 @@ const app = {
         this.renderProducts(filtered);
     },
 
-    /* ================= FUNÇÕES DE ANÁLISE TÉCNICA (MODAL FLUTUANTE) ================= */
-
-    // Abre o modal de histórico e carrega os dados
     async showHistory(pid, name) {
         document.getElementById('history-header').innerText = `Análise: ${name}`;
         ui.openModal('history');
         
-        // Busca os últimos 300 logs deste produto
         const snap = await db.collection('historico')
             .where('productId', '==', pid)
             .orderBy('timestamp', 'desc')
@@ -395,51 +689,43 @@ const app = {
         currentViewedLogs = [];
         snap.forEach(d => currentViewedLogs.push(d.data()));
         
-        // Filtro inicial de 15 dias
         this.filterHistory(15);
-        // Renderiza o calendário
         this.renderCalendar();
     },
 
-    // Filtra o histórico por período (7, 15, 30 dias) e atualiza KPIs e Gráfico
     filterHistory(days) {
-        // Atualiza estado visual dos cards de KPI
         document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('highlight'));
-        document.getElementById(`kpi-${days}`).classList.add('highlight');
+        const card = document.getElementById(`kpi-${days}`);
+        if (card) card.classList.add('highlight');
         
         const cutoffTime = new Date().getTime() - (days * 24 * 60 * 60 * 1000);
         
-        // Filtra logs dentro do período
         const filteredLogs = currentViewedLogs.filter(l => l.timestamp && l.timestamp.toDate().getTime() >= cutoffTime);
         
-        // Calcula o total de saídas no período
         const totalSaidas = filteredLogs
             .filter(l => l.type === 'SAIDA')
             .reduce((sum, log) => sum + log.qty, 0);
             
-        // Calcula e exibe a média diária (arredondada)
         const avg = Math.round(totalSaidas / days);
-        document.getElementById(`avg-${days}`).innerText = avg;
+        const avgEl = document.getElementById(`avg-${days}`);
+        if (avgEl) avgEl.innerText = avg;
         
-        // Atualiza o gráfico e a tabela de logs
         this.renderChart(filteredLogs);
-        document.getElementById('log-title').innerText = `Movimentações Recentes (Últimos ${days} dias)`;
+        const titleEl = document.getElementById('log-title');
+        if (titleEl) titleEl.innerText = `Movimentações Recentes (Últimos ${days} dias)`;
         this.renderTimeline(filteredLogs);
         
-        // Reseta a seleção visual do calendário
         document.querySelectorAll('.cal-day').forEach(d => d.style.background = "");
     },
 
-    // Filtra logs por um dia específico clicado no calendário
     filterByDay(day, month, year, element) {
-        // Atualiza seleção visual no calendário
         document.querySelectorAll('.cal-day').forEach(d => d.style.background = "");
-        if(element) element.style.background = "var(--success)"; // Cor verde para indicar seleção
-
-        const targetDateStr = new Date(year, month, day).toLocaleDateString('pt-BR');
-        document.getElementById('log-title').innerText = `Movimentações em ${targetDateStr}`;
+        if(element) element.style.background = "var(--success)";
         
-        // Filtra logs que correspondem exatamente à data clicada (comparação de string local)
+        const targetDateStr = new Date(year, month, day).toLocaleDateString('pt-BR');
+        const titleEl = document.getElementById('log-title');
+        if (titleEl) titleEl.innerText = `Movimentações em ${targetDateStr}`;
+        
         const filtered = currentViewedLogs.filter(l => {
             if(!l.timestamp) return false;
             return l.timestamp.toDate().toLocaleDateString('pt-BR') === targetDateStr;
@@ -448,9 +734,10 @@ const app = {
         this.renderTimeline(filtered);
     },
 
-    // Renderiza a tabela de logs (timeline)
     renderTimeline(logs) {
         const tbody = document.getElementById('history-content');
+        if (!tbody) return;
+
         if (logs.length === 0) {
             tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; color:#94a3b8; padding:15px;'>Nenhuma movimentação no período selecionado.</td></tr>";
             return;
@@ -465,16 +752,15 @@ const app = {
         `).join('');
     },
 
-    // Renderiza o gráfico de uso individual (Chart.js)
     renderChart(logs) {
-        const ctx = document.getElementById('usageChart').getContext('2d');
+        const canvas = document.getElementById('usageChart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
         
-        // Limpa a instância anterior do gráfico para evitar sobreposição/erros
         if (myChart instanceof Chart) {
             myChart.destroy();
         }
 
-        // Agrupa saídas por dia
         const dailyUsage = {};
         logs.forEach(l => {
             if (l.type === 'SAIDA' && l.timestamp) {
@@ -483,11 +769,9 @@ const app = {
             }
         });
 
-        // Prepara dados para o gráfico (ordem cronológica)
         const labels = Object.keys(dailyUsage).reverse();
         const dataPoints = Object.values(dailyUsage).reverse();
 
-        // Configuração do Chart.js
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -495,7 +779,7 @@ const app = {
                 datasets: [{
                     label: 'Quantidade Retirada',
                     data: dataPoints,
-                    backgroundColor: '#4f46e5', // Cor primária (Índigo)
+                    backgroundColor: '#4f46e5',
                     borderRadius: 6,
                     barThickness: 'flex',
                     maxBarThickness: 30
@@ -527,10 +811,10 @@ const app = {
         });
     },
 
-    // Renderiza o widget de calendário
     renderCalendar() {
         const grid = document.getElementById('calendar-root');
-        // Cabeçalho do calendário com controles de mês
+        if (!grid) return;
+
         grid.innerHTML = `
             <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
                 <button onclick="app.changeMonth(-1)" class="btn-outline-small" style="padding: 4px 10px;">❮</button>
@@ -546,25 +830,20 @@ const app = {
         const year = calendarDate.getFullYear();
         const month = calendarDate.getMonth();
 
-        // Atualiza o título do mês
         document.getElementById('cal-title').innerText = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(calendarDate).toUpperCase();
 
         const firstDayOfWeek = new Date(year, month, 1).getDay();
         const lastDateOfMonth = new Date(year, month + 1, 0).getDate();
         const calDaysContainer = document.getElementById('cal-days');
 
-        // Adiciona células vazias para o alinhamento do primeiro dia
         for (let i = 0; i < firstDayOfWeek; i++) {
             calDaysContainer.innerHTML += `<div></div>`;
         }
 
-        // Gera os dias do mês
         for (let d = 1; d <= lastDateOfMonth; d++) {
             const dateStr = new Date(year, month, d).toLocaleDateString('pt-BR');
-            // Verifica se houve movimentação neste dia
             const hasUsage = currentViewedLogs.some(l => l.timestamp && l.timestamp.toDate().toLocaleDateString('pt-BR') === dateStr);
             
-            // Cria o elemento do dia, adicionando classe 'has-usage' e evento de clique se houver logs
             calDaysContainer.innerHTML += `
                 <div class="cal-day ${hasUsage ? 'has-usage' : ''}" 
                      ${hasUsage ? `onclick="app.filterByDay(${d}, ${month}, ${year}, this)"` : ''}>
@@ -574,27 +853,20 @@ const app = {
         }
     },
 
-    // Altera o mês do calendário
     changeMonth(dir) {
         calendarDate.setMonth(calendarDate.getMonth() + dir);
         this.renderCalendar();
     },
 
-    /* ================= FUNÇÕES DA ABA COMPRAS (PREDIÇÃO) ================= */
-
-    // Calcula e renderiza a lista de predição de compras
     async renderShoppingList(items) {
-        // Define o período de análise (últimos 15 dias)
         const limitDate = new Date();
         limitDate.setDate(limitDate.getDate() - 15);
 
-        // Busca o histórico de saídas no período
         const historySnap = await db.collection('historico')
             .where('type', '==', 'SAIDA')
             .where('timestamp', '>=', limitDate)
             .get();
 
-        // Mapa para somar o uso total por produto
         const usageMap = {};
         historySnap.forEach(doc => {
             const data = doc.data();
@@ -602,18 +874,17 @@ const app = {
         });
 
         const tbody = document.getElementById('shopping-list');
+        if (!tbody) return;
+
         if (items.length === 0) {
             tbody.innerHTML = "<tr><td colspan='5' class='text-center'>Nenhum dado para análise.</td></tr>";
             return;
         }
 
-        // Gera as linhas da tabela com os cálculos preditivos
         tbody.innerHTML = items.map(i => {
             const totalUsage15d = usageMap[i.id] || 0;
-            const dailyAvg = totalUsage15d / 15; // Média diária simples
+            const dailyAvg = totalUsage15d / 15;
             const currentStock = Number(i.qty) || 0;
-
-            // Calcula dias restantes estimados (evita divisão por zero)
             const daysRemaining = dailyAvg > 0.01 ? Math.floor(currentStock / dailyAvg) : Infinity;
 
             let dateLimitStr = "ESTÁVEL (Sem uso recente)";
@@ -621,13 +892,12 @@ const app = {
 
             if (daysRemaining !== Infinity) {
                 if (daysRemaining <= 0) {
-                     dateLimitStr = "ESGOTADO / CRÍTICO";
-                     badgeClass = "badge-critical";
+                    dateLimitStr = "ESGOTADO / CRÍTICO";
+                    badgeClass = "badge-critical";
                 } else {
                     const estimatedDate = new Date();
                     estimatedDate.setDate(estimatedDate.getDate() + daysRemaining);
                     dateLimitStr = estimatedDate.toLocaleDateString('pt-BR');
-                    // Define crítico se durar 5 dias ou menos
                     badgeClass = daysRemaining <= 5 ? "badge-critical" : "badge-safe";
                 }
             }
@@ -651,12 +921,10 @@ const app = {
         }).join('');
     },
 
-    /* ================= FUNÇÕES DA ABA GESTÃO (ADMIN) ================= */
-
-    // Renderiza a contagem regressiva e botões de ação manual para alertas
     renderAlertCountdown() {
         const tbody = document.getElementById('alert-countdown-list');
-        // Filtra itens com estoque baixo ou zerado
+        if (!tbody) return;
+
         const lowStockItems = fullInventory.filter(i => Number(i.qty) <= Number(i.minThreshold));
 
         if (lowStockItems.length === 0) {
@@ -666,14 +934,10 @@ const app = {
 
         const now = new Date();
         tbody.innerHTML = lowStockItems.map(i => {
-            // Data em que o estoque ficou baixo (ou agora, se não houver registro)
             const lowSinceDate = i.lowStockSince ? i.lowStockSince.toDate() : now;
-            // Calcula dias em estado crítico
             const daysInAlert = Math.floor((now - lowSinceDate) / (24 * 60 * 60 * 1000));
             
-            // Verifica se já foi enviado alerta manual nesta sessão
             const hasSentInSession = sessionManualAlerts[i.id] ? " ✅ Enviado" : "";
-            // Desabilita o botão se já enviado na sessão
             const disabledAttr = sessionManualAlerts[i.id] ? "disabled style='opacity:0.6; cursor:not-allowed;'" : "";
 
             return `
@@ -690,7 +954,6 @@ const app = {
         }).join('');
     },
 
-    // Envia alerta manual via EmailJS
     async sendManualAlert(id, prodName, qty, min) {
         if (!alertConfig.email) return alert("Por favor, configure um e-mail destinatário primeiro.");
         
@@ -701,8 +964,8 @@ const app = {
 
         try {
             await this.sendEmailAlert(prodName, qty, min, "Disparo Manual via Painel de Gestão");
-            sessionManualAlerts[id] = true; // Marca como enviado na sessão
-            this.renderAlertCountdown(); // Atualiza a UI
+            sessionManualAlerts[id] = true;
+            this.renderAlertCountdown();
             alert(`Alerta para ${prodName} enviado com sucesso!`);
         } catch (error) {
             alert("Erro ao enviar e-mail. Verifique o console.");
@@ -711,47 +974,38 @@ const app = {
         }
     },
 
-    // Verifica e envia alertas automáticos para itens baixos há mais de 10 dias
     async checkTenDayAlerts() {
-        if (!alertConfig.email) return; // Não faz nada se não houver e-mail configurado
+        if (!alertConfig.email) return;
 
         const now = new Date();
-        const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000; // 10 dias em milissegundos
+        const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
 
         fullInventory.forEach(async (p) => {
             const currentQty = Number(p.qty);
             const minThreshold = Number(p.minThreshold);
 
             if (currentQty <= minThreshold) {
-                // Produto está com estoque baixo
                 if (!p.lowStockSince) {
-                    // Se não tem data de início do alerta, define agora
                     await db.collection('produtos').doc(p.id).update({
                         lowStockSince: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     return;
                 }
 
-                // Verifica há quanto tempo está baixo
                 const timeInAlert = now - p.lowStockSince.toDate();
                 if (timeInAlert >= TEN_DAYS_MS) {
-                    // Passou de 10 dias. Verifica quando foi o último alerta enviado.
-                    const lastAlertDate = p.lastAlertSent ? p.lastAlertSent.toDate() : new Date(0); // Data zero se nunca enviou
+                    const lastAlertDate = p.lastAlertSent ? p.lastAlertSent.toDate() : new Date(0);
                     const timeSinceLastEmail = now - lastAlertDate;
 
-                    // Se nunca enviou OU se o último envio também foi há mais de 10 dias (ciclo de reenvio)
                     if (timeSinceLastEmail >= TEN_DAYS_MS) {
-                        console.log(`Disparando alerta automático de 10 dias para: ${p.name}`);
                         this.sendEmailAlert(p.name, currentQty, minThreshold, "Alerta Automático (Ciclo de 10 dias)");
                         
-                        // Atualiza a data do último envio para reiniciar o ciclo
                         await db.collection('produtos').doc(p.id).update({
                             lastAlertSent: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     }
                 }
             } else {
-                // Produto recuperou o estoque. Limpa os marcadores de alerta.
                 if (p.lowStockSince || p.lastAlertSent) {
                     await db.collection('produtos').doc(p.id).update({
                         lowStockSince: null,
@@ -762,7 +1016,6 @@ const app = {
         });
     },
 
-    // Função genérica para envio de e-mail via EmailJS
     async sendEmailAlert(prodName, qty, min, origin = "Sistema LogMaster") {
         const templateParams = {
             to_email: alertConfig.email,
@@ -775,14 +1028,12 @@ const app = {
 
         try {
             await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
-            console.log(`E-mail enviado para ${prodName}`);
         } catch (error) {
             console.error("Falha no envio de e-mail:", error);
-            throw error; // Propaga o erro para quem chamou
+            throw error;
         }
     },
 
-    // Salva o e-mail de configuração no Firestore
     async saveAlertConfig() {
         const email = document.getElementById('alert-email-input').value.trim();
         if (!email || !email.includes('@')) return alert("E-mail inválido.");
@@ -795,26 +1046,23 @@ const app = {
         }
     },
 
-    // Renderiza o gráfico de saídas mensais na aba Gestão
     async showCategorySummaries() {
-        const ctx = document.getElementById('adminChart15').getContext('2d');
+        const canvas = document.getElementById('adminChart15');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
         
-        // Limpa gráfico anterior
         if (adminChart15 instanceof Chart) {
             adminChart15.destroy();
         }
 
-        // Define período (últimos 15 dias)
         const limitDate = new Date();
         limitDate.setDate(limitDate.getDate() - 15);
 
-        // Busca histórico de saídas
         const historySnap = await db.collection('historico')
             .where('type', '==', 'SAIDA')
             .where('timestamp', '>=', limitDate)
             .get();
 
-        // Agrupa totais por categoria
         const categoryTotals = {};
         historySnap.forEach(doc => {
             const data = doc.data();
@@ -823,10 +1071,8 @@ const app = {
             }
         });
 
-        // Se não houver dados, mostra mensagem no canvas (opcional, aqui deixarei vazio)
         if (Object.keys(categoryTotals).length === 0) return;
 
-        // Configura o gráfico Chart.js
         adminChart15 = new Chart(ctx, {
             type: 'bar',
             data: {
@@ -863,14 +1109,14 @@ const app = {
         });
     },
 
-    /* ================= FUNÇÕES DE CATEGORIAS ================= */
-
-    // Adiciona nova categoria
     async addCategory() {
+        if (!auth.can('manageCategories')) {
+            return alert('Você não tem permissão para gerenciar categorias.');
+        }
+
         const name = document.getElementById('new-cat-name').value.trim();
         if (!name) return alert("Digite um nome para a categoria.");
         
-        // Verifica duplicidade localmente
         if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
             return alert("Esta categoria já existe.");
         }
@@ -879,16 +1125,20 @@ const app = {
         document.getElementById('new-cat-name').value = "";
     },
 
-    // Deleta categoria (com confirmação)
     async deleteCategory(id) {
+        if (!auth.can('manageCategories')) {
+            return alert('Você não tem permissão para gerenciar categorias.');
+        }
+
         if (confirm("Tem certeza? Isso não excluirá os produtos, apenas a categoria da lista.")) {
             await db.collection('categorias').doc(id).delete();
         }
     },
 
-    // Renderiza a lista de categorias no modal
     renderCategoriesList() {
         const tbody = document.getElementById('categories-list');
+        if (!tbody) return;
+
         if (categories.length === 0) {
             tbody.innerHTML = "<tr><td colspan='2'>Nenhuma categoria cadastrada.</td></tr>";
             return;
@@ -903,17 +1153,18 @@ const app = {
         `).join('');
     },
 
-    // Popula o select de categorias nos formulários de produto
     populateCategorySelect() {
         const select = document.getElementById('p-category');
+        if (!select) return;
         select.innerHTML = `<option value="">Selecione uma categoria...</option>` + 
             categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
     },
 
-    /* ================= FUNÇÕES UTILITÁRIAS E EXPORTAÇÃO ================= */
-
-    // Exporta o estoque atual para CSV
     exportCSV() {
+        if (!auth.can('exportReports')) {
+            return alert('Você não tem permissão para exportar relatórios.');
+        }
+
         if (fullInventory.length === 0) return alert("Nada para exportar.");
         
         let csvContent = "data:text/csv;charset=utf-8,";
@@ -921,7 +1172,6 @@ const app = {
         
         fullInventory.forEach(p => {
             const status = Number(p.qty) <= Number(p.minThreshold) ? "CRITICO" : "OK";
-            // Escpa aspas duplas e adiciona aspas para lidar com vírgulas nos nomes
             const escapedName = p.name.replace(/"/g, '""');
             csvContent += `"${p.id}","${escapedName}","${p.category}",${p.qty},${p.minThreshold},"${status}"\n`;
         });
@@ -936,9 +1186,15 @@ const app = {
         document.body.removeChild(link);
     },
 
-    // Gera relatório PDF simples do estoque
     generatePDF() {
+        if (!auth.can('exportReports')) {
+            return alert('Você não tem permissão para exportar relatórios.');
+        }
+
         if (fullInventory.length === 0) return alert("Nada para gerar PDF.");
+
+        const template = document.getElementById('pdf-template');
+        if (!template) return;
 
         let htmlContent = `
             <div style="font-family: sans-serif; padding: 30px;">
@@ -979,9 +1235,8 @@ const app = {
             </div>
         `;
 
-        const template = document.getElementById('pdf-template');
         template.innerHTML = htmlContent;
-        template.style.display = 'block'; // Mostra temporariamente para o html2pdf
+        template.style.display = 'block';
 
         const opt = {
             margin: 10,
@@ -992,21 +1247,22 @@ const app = {
         };
 
         html2pdf().from(template).set(opt).save().then(() => {
-            template.style.display = 'none'; // Esconde novamente
+            template.style.display = 'none';
             template.innerHTML = '';
         });
     },
 
-    // Carrega os logs de auditoria
     async loadAuditLogs() {
         ui.openModal('audit');
         const tbody = document.getElementById('audit-list');
+        if (!tbody) return;
+
         tbody.innerHTML = "<tr><td colspan='4' class='text-center'>Carregando registros...</td></tr>";
 
         try {
             const snap = await db.collection('historico')
                 .orderBy('timestamp', 'desc')
-                .limit(50) // Limita aos últimos 50 registros para performance
+                .limit(50)
                 .get();
 
             if (snap.empty) {
@@ -1043,53 +1299,73 @@ const app = {
     }
 };
 
-// Objeto de Controle de Interface (UI)
+/* ===================== UI ===================== */
+
 const ui = {
-    // Alterna entre as abas (views)
     switchView(v) {
-        // Esconde todas as seções
         document.querySelectorAll('.view-sec').forEach(s => s.classList.add('hidden'));
-        // Remove estado ativo de todos os botões
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         
-        // Mostra a seção selecionada e ativa o botão correspondente
-        document.getElementById('view-' + v).classList.remove('hidden');
-        document.getElementById('tab-' + v).classList.add('active');
+        const view = document.getElementById('view-' + v);
+        const tab = document.getElementById('tab-' + v);
+        if (view) view.classList.remove('hidden');
+        if (tab) tab.classList.add('active');
         
-        // Ações específicas ao entrar em uma aba
         if (v === 'admin') {
-            app.showCategorySummaries(); // Atualiza gráfico se for a aba Gestão
+            app.showCategorySummaries();
         }
-        window.scrollTo(0, 0); // Rola para o topo
+        window.scrollTo(0, 0);
     },
 
-    // Abre um modal pelo seu ID sufixo
     openModal(m) {
-        document.getElementById('modal-' + m).classList.remove('hidden');
-        document.body.style.overflow = 'hidden'; // Previne rolagem da página de fundo
+        const el = document.getElementById('modal-' + m);
+        if (!el) return;
+        el.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
     },
 
-    // Fecha um modal pelo seu ID sufixo
     closeModal(m) {
-        document.getElementById('modal-' + m).classList.add('hidden');
-        document.body.style.overflow = ''; // Restaura rolagem
+        const el = document.getElementById('modal-' + m);
+        if (!el) return;
+        el.classList.add('hidden');
+        document.body.style.overflow = '';
     },
 
-    // Alterna entre modo claro e escuro
     toggleDarkMode() {
         const currentTheme = document.documentElement.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', newTheme);
-        // Opcional: Salvar preferência no localStorage
         localStorage.setItem('theme', newTheme);
     }
 };
 
-// Event Listeners Globais para submissão de formulários
+/* ===================== INICIALIZAÇÃO GLOBAL ===================== */
+
+window.onload = async () => {
+    try {
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        await fAuth.signInAnonymously();
+        console.log("Conectado ao Firebase com sucesso.");
+
+        await auth.ensureDefaultAdmin();
+
+        const hasSession = await auth.checkSession();
+
+        document.getElementById('loading-screen').classList.add('hidden');
+
+        if (!hasSession) {
+            // app.init() será chamado após login
+        }
+
+    } catch (e) {
+        console.error("Erro crítico na inicialização:", e);
+        alert("Falha ao conectar com o servidor. Verifique sua internet.");
+    }
+};
+
 document.getElementById('form-move').addEventListener('submit', app.processMove);
 document.getElementById('form-product').addEventListener('submit', app.handleProductSubmit);
 
-// Verifica preferência de tema salva ao iniciar
 if (localStorage.getItem('theme') === 'dark') {
     ui.toggleDarkMode();
 }

@@ -1,18 +1,199 @@
+/* ===================== TELA DE LOGIN ===================== */
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.login-overlay.hidden {
+    display: none;
+}
+
+.login-container {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.login-header {
+    margin-bottom: 30px;
+}
+
+.login-logo {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.login-header h1 {
+    color: var(--primary);
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.login-header p {
+    color: #64748b;
+    margin: 5px 0 0;
+    font-size: 0.9rem;
+}
+
+#form-login .form-group {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+#form-login label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text);
+}
+
+#form-login input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+#form-login input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.login-error {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 15px;
+    min-height: 20px;
+}
+
+.login-footer {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.login-footer small {
+    color: #94a3b8;
+}
+
+/* ===================== INDICADOR DE USUÁRIO LOGADO ===================== */
+.user-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f1f5f9;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.user-badge .user-role {
+    background: var(--primary);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.user-badge .user-role.role-supervisor {
+    background: #f59e0b;
+}
+
+.user-badge .user-role.role-operador {
+    background: #64748b;
+}
+
+.btn-logout {
+    background: none;
+    border: 1px solid #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.btn-logout:hover {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+}
+
+/* ===================== ELEMENTOS OCULTOS POR PERMISSÃO ===================== */
+.permission-hidden {
+    display: none !important;
+}
+
+/* ===================== SEÇÃO DE GERENCIAMENTO DE USUÁRIOS ===================== */
+.users-section {
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 2px solid #e2e8f0;
+}
+
+.users-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.user-form-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.user-form-inline input,
+.user-form-inline select {
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .user-form-inline {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* =========================================
    LOGMASTER PRO v14.3 - FOLHA DE ESTILO
 ========================================= */
 
 /* Variáveis de Tema e Cores */
 :root {
-    --primary: #4f46e5;        /* Cor principal (Índigo) */
-    --primary-glow: rgba(79, 70, 229, 0.12); /* Brilho suave da cor principal */
-    --bg: #f8fafc;             /* Cor de fundo da página */
-    --card: #ffffff;           /* Cor de fundo dos cartões/modais */
-    --text: #1e293b;           /* Cor do texto principal */
-    --border: #e2e8f0;         /* Cor das bordas */
-    --success: #10b981;        /* Cor de sucesso (Verde) */
-    --warning: #f59e0b;        /* Cor de alerta (Laranja) */
-    --danger: #ef4444;         /* Cor de erro/crítico (Vermelho) */
+    --primary: #4f46e5;
+    --primary-glow: rgba(79, 70, 229, 0.12);
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --border: #e2e8f0;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
 }
 
 /* Tema Escuro (Ativado via JS) */
@@ -28,7 +209,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Inter', sans-serif; /* Fonte moderna e profissional */
+    font-family: 'Inter', sans-serif;
 }
 
 body {
@@ -37,7 +218,7 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     display: flex;
-    flex-direction: column; /* Necessário para o rodapé fixo */
+    flex-direction: column;
 }
 
 .container {
@@ -48,7 +229,7 @@ body {
 }
 
 .main-content {
-    flex: 1; /* Ocupa o espaço disponível, empurrando o rodapé */
+    flex: 1;
     padding-bottom: 40px;
 }
 
@@ -64,7 +245,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
+    z-index: 9000;
     flex-direction: column;
 }
 
@@ -99,7 +280,7 @@ body {
 .nav-tabs {
     display: flex;
     gap: 8px;
-    background: var(--bg); /* Fundo sutil para as abas */
+    background: var(--bg);
     padding: 6px;
     border-radius: 14px;
     border: 1px solid var(--border);
@@ -142,16 +323,7 @@ body {
     font-size: 1.2rem;
 }
 
-.user-chip {
-    font-size: 12px;
-    font-weight: 700;
-    background: var(--primary-glow);
-    color: var(--primary);
-    padding: 6px 12px;
-    border-radius: 20px;
-}
-
-/* ================= RODAPÉ (ADICIONADO NA v14.3) ================= */
+/* ================= RODAPÉ ================= */
 .footer-copyright {
     padding: 25px 0;
     text-align: center;
@@ -160,528 +332,404 @@ body {
     color: #94a3b8;
     border-top: 1px solid var(--border);
     background: var(--card);
-    margin-top: auto; /* Garante que fique no final se o conteúdo for curto */
+    margin-top: auto;
 }
 
-/* ================= COMPONENTES DE UI ================= */
+/* ================= ÁREAS PRINCIPAIS ================= */
 
-/* Barra de Busca Moderna */
+.view-sec {
+    margin-top: 20px;
+}
+
+/* Header de ferramentas na aba estoque */
 .header-tools-modern {
-    margin-top: 35px;
     display: flex;
-    justify-content: center;
-    margin-bottom: 25px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 15px;
 }
 
+/* Barra de busca moderna */
 .search-wrapper {
     position: relative;
+    max-width: 320px;
     width: 100%;
-    max-width: 650px;
-}
-
-.search-icon {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #94a3b8;
-    font-size: 1.2rem;
 }
 
 .search-wrapper input {
     width: 100%;
-    padding: 18px 18px 18px 55px;
-    border: 2px solid var(--border);
-    border-radius: 20px;
-    outline: none;
-    font-size: 15px;
-    font-weight: 600;
+    padding: 10px 14px 10px 32px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
     background: var(--card);
+    font-size: 13px;
     color: var(--text);
-    transition: border-color 0.2s;
 }
 
-.search-wrapper input:focus {
-    border-color: var(--primary);
+.search-wrapper .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: #94a3b8;
 }
 
-/* Container de Tabela */
+/* Tabelas */
 .table-container {
     background: var(--card);
-    border-radius: 24px;
+    border-radius: 18px;
     border: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
     overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.03);
 }
 
 .inventory-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 13px;
+}
+
+.inventory-table thead {
+    background: #f8fafc;
+}
+
+.inventory-table th,
+.inventory-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .inventory-table th {
-    background: var(--bg);
-    padding: 18px 20px;
-    text-align: left;
-    font-size: 11px;
+    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #64748b;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
     font-weight: 700;
-    border-bottom: 2px solid var(--border);
-}
-
-.inventory-table td {
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
-    font-size: 14px;
-    vertical-align: middle;
-    font-weight: 500;
-}
-
-.inventory-table tbody tr {
-    cursor: pointer;
-    transition: background-color 0.2s;
 }
 
 .inventory-table tbody tr:hover {
-    background-color: var(--bg);
+    background: #f9fafb;
 }
 
-/* Indicadores Visuais de Estoque (Linhas) */
+/* Imagem thumb */
+.img-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+}
+
+/* Linhas coloridas por nível de estoque */
 .row-critical {
-    border-left: 5px solid var(--danger) !important;
-    background: rgba(239, 68, 68, 0.05) !important;
+    background: #fef2f2;
 }
 
 .row-warning {
-    border-left: 5px solid var(--warning) !important;
-    background: rgba(245, 158, 11, 0.05) !important;
+    background: #fffbeb;
 }
 
-/* Thumbnail de Imagem */
-.img-thumb {
-    width: 50px !important;
-    height: 50px !important;
-    object-fit: cover !important;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    display: block;
-    background: #f1f5f9;
-}
-
-/* Botões de Ação na Tabela */
+/* Ações rápidas */
 .frame-ops {
     display: flex;
     gap: 8px;
-    padding: 6px;
-    border-radius: 14px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    display: inline-flex;
 }
 
 .btn-capsule {
-    border: none !important;
-    padding: 10px 18px !important;
-    border-radius: 10px !important;
-    font-weight: 700;
+    border-radius: 999px;
+    border: none;
+    padding: 6px 14px;
     font-size: 11px;
+    font-weight: 700;
     cursor: pointer;
-    text-transform: uppercase;
-    color: white !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.2s;
 }
 
-.btn-capsule:hover {
-    transform: translateY(-1px);
+.btn-in {
+    background: rgba(16, 185, 129, 0.1);
+    color: #047857;
 }
 
-.btn-in { background: linear-gradient(135deg, #10b981, #059669) !important; }
-.btn-out { background: linear-gradient(135deg, #f59e0b, #d97706) !important; }
+.btn-out {
+    background: rgba(239, 68, 68, 0.08);
+    color: #b91c1c;
+}
 
 .btn-icon {
-    background: var(--card);
+    border-radius: 999px;
+    padding: 6px 10px;
     border: 1px solid var(--border);
-    padding: 10px;
-    border-radius: 12px;
+    background: white;
     cursor: pointer;
-    font-size: 1.1rem;
-    transition: all 0.2s;
-    color: var(--text);
-}
-
-.btn-icon:hover {
-    border-color: var(--primary);
-    background: var(--bg);
-}
-
-/* ================= MODAIS FLUTUANTES ================= */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.6); /* Fundo escuro translúcido */
-    backdrop-filter: blur(6px); /* Efeito de desfoque */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-}
-
-.modal-overlay:not(.hidden) {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.modal-card-floating {
-    background: var(--card);
-    border-radius: 30px;
-    width: 100%;
-    max-width: 500px;
-    position: relative;
-    border: 1px solid var(--border);
-    overflow: hidden;
-    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-    transform: translateY(20px);
-    transition: transform 0.3s ease;
-}
-
-.modal-overlay:not(.hidden) .modal-card-floating {
-    transform: translateY(0);
-}
-
-.modal-card-floating.large {
-    max-width: 1200px;
-    height: 90vh;
-    display: flex;
-    flex-direction: column;
-}
-.modal-card-floating.small {
-    max-width: 400px;
-}
-
-/* Cabeçalho do Modal com Botão Fechar Fixo */
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 30px;
-    border-bottom: 1px solid var(--border);
-    background: var(--card);
-    position: relative; /* Para posicionamento absoluto do botão */
-}
-
-.modal-header h3 {
-    font-size: 1.2rem;
-    font-weight: 700;
-}
-
-.close-btn-header {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: #64748b;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    position: absolute; /* Fixa o botão */
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%); /* Centraliza verticalmente */
-}
-
-.close-btn-header:hover {
-    background: var(--danger);
-    color: white;
-    border-color: var(--danger);
-}
-
-/* Corpo do Modal */
-.modal-body {
-    padding: 30px;
-    overflow-y: auto;
-}
-
-.modal-body-scroll {
-    padding: 0;
-    overflow-y: auto;
-    flex: 1;
-}
-
-/* Layout de Análise Técnica */
-.analysis-wrapper {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 30px;
-    padding: 30px;
-    overflow-y: auto;
-    flex: 1;
-}
-
-/* KPIs Cards */
-.kpi-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    margin-bottom: 25px;
-}
-
-.kpi-card {
-    background: var(--bg);
-    padding: 20px;
-    border-radius: 18px;
-    text-align: center;
-    border: 2px solid var(--border);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.kpi-card:hover {
-    border-color: var(--primary);
-}
-
-.kpi-card.highlight {
-    border-color: var(--primary);
-    background: var(--primary-glow);
-}
-
-.kpi-card span {
-    font-size: 12px;
-    color: #64748b;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.kpi-card strong {
-    font-size: 2rem;
-    color: var(--primary);
-    font-weight: 800;
-    display: block;
-    margin-top: 5px;
-}
-
-/* Calendário Widget */
-.analysis-sidebar {
-    background: var(--bg);
-    padding: 20px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-}
-
-.calendar-widget {
-    margin-top: 15px;
-}
-
-.cal-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
-    margin-top: 15px;
-}
-
-.cal-day {
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-size: 13px;
-    border-radius: 10px;
-    color: #94a3b8;
-    font-weight: 600;
-    border: 2px solid transparent;
 }
 
-.cal-day.has-usage {
+/* Botões genéricos */
+.btn-primary {
+    width: 100%;
+    padding: 14px;
     background: var(--primary);
     color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+    transition: background 0.2s;
 }
 
-.cal-day.selected {
-    border-color: var(--success) !important;
+.btn-primary:hover {
+    background: #4338ca;
 }
 
-/* ================= ÁREA DE GESTÃO (DASHBOARD) ================= */
+.btn-outline-small {
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Dashboard / Cards */
 .admin-grid {
     display: grid;
-    grid-template-columns: 1fr 360px;
-    gap: 25px;
-    margin-top: 20px;
+    grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr);
+    gap: 18px;
 }
 
 .dashboard-card {
     background: var(--card);
-    border-radius: 24px;
+    border-radius: 18px;
     border: 1px solid var(--border);
-    padding: 25px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    padding: 18px 18px 20px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    margin-bottom: 16px;
 }
 
 .dashboard-card h4 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* Botões de Ferramentas (Tiles) */
-.btn-tile {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 18px;
-    background: var(--bg);
-    border: 2px solid var(--border);
-    border-radius: 16px;
-    cursor: pointer;
-    color: var(--text);
-    font-weight: 700;
-    margin-bottom: 12px;
-    text-align: left;
-    transition: all 0.2s;
     font-size: 14px;
+    margin-bottom: 8px;
 }
 
-.btn-tile:hover {
-    border-color: var(--primary);
-    background: var(--card);
-    transform: translateX(4px);
-}
-
-.btn-tile span {
-    font-size: 1.4rem;
-}
-
-/* Tabelas Minimalistas (Logs e Alertas) */
-.log-table-wrapper {
-    max-height: 350px;
-    overflow-y: auto;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-}
-
+/* Tabelas menores */
 .minimal-table {
     width: 100%;
     border-collapse: collapse;
+    font-size: 12px;
 }
 
-.minimal-table th {
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    padding: 12px 15px;
-    text-align: left;
-    font-size: 11px;
-    font-weight: 700;
-    color: #64748b;
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--border);
-}
-
+.minimal-table th,
 .minimal-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-    color: var(--text);
+    padding: 10px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
 }
 
-/* ================= FORMULÁRIOS E BOTÕES GERAIS ================= */
+.log-table-wrapper {
+    max-height: 260px;
+    overflow: auto;
+}
+
+/* Botões em mosaico na gestão */
+.btn-tile {
+    width: 100%;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 12px;
+    border: 1px dashed #cbd5f5;
+    background: #f8fafc;
+    cursor: pointer;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+/* KPIs e análise */
+.kpi-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.kpi-card {
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    cursor: pointer;
+}
+
+.kpi-card span {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.kpi-card strong {
+    font-size: 18px;
+}
+
+.kpi-card.highlight {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary-glow);
+}
+
+/* Modal genérico */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 6000;
+}
+
+.modal-card-floating {
+    background: var(--card);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+}
+
+.modal-card-floating.large {
+    max-width: 960px;
+}
+
+.modal-card-floating.small {
+    max-width: 420px;
+}
+
+.modal-header {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.close-btn-header {
+    border-radius: 999px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: #f1f5f9;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.modal-body,
+.modal-body-scroll {
+    padding: 18px 22px 22px;
+}
+
+.modal-body-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+/* Campos de formulário */
 .field {
-    margin-bottom: 20px;
+    margin-bottom: 14px;
 }
 
 .field label {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 5px;
     display: block;
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: #475569;
 }
 
 .field input,
 .field select {
     width: 100%;
-    padding: 14px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    background: var(--bg);
-    font-weight: 500;
-    outline: none;
-    color: var(--text);
-    transition: border-color 0.2s;
-}
-
-.field input:focus,
-.field select:focus {
-    border-color: var(--primary);
-}
-
-.btn-primary-auth {
-    width: 100%;
-    padding: 16px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: 14px;
-    font-weight: 800;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-primary-auth:hover {
-    background: #4338ca; /* Tom ligeiramente mais escuro */
-}
-
-.btn-outline-small {
-    padding: 6px 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
     border: 1px solid var(--border);
-    background: transparent;
+    font-size: 13px;
+}
+
+/* Calendário */
+.calendar-widget {
+    background: var(--card);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 14px;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0,1fr));
+    gap: 6px;
+    font-size: 11px;
+}
+
+.cal-day {
+    height: 26px;
     border-radius: 8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+}
+
+.cal-day.has-usage {
+    background: #e0f2fe;
+    color: #0f172a;
+}
+
+/* Badges de predição */
+.badge-predict {
+    padding: 4px 10px;
+    border-radius: 999px;
     font-size: 11px;
     font-weight: 700;
-    cursor: pointer;
-    color: var(--text);
-}
-
-/* Badges de Predição */
-.badge-predict {
-    padding: 6px 12px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.badge-critical {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--danger);
-    border: 1px solid var(--danger);
 }
 
 .badge-safe {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--success);
-    border: 1px solid var(--success);
+    background: rgba(16,185,129,0.08);
+    color: #047857;
 }
 
-/* Utilitários de Texto */
-.text-right {
-    text-align: right !important;
+.badge-critical {
+    background: rgba(239,68,68,0.08);
+    color: #b91c1c;
+}
+
+/* Responsividade */
+@media (max-width: 960px) {
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-inner {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .nav-tabs {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .header-right {
+        order: 2;
+    }
+
+    .table-container {
+        border-radius: 12px;
+    }
+
+    .inventory-table th,
+    .inventory-table td {
+        padding: 10px 8px;
+    }
 }

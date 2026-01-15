@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LogMaster Pro v14.3 - SEMOBI Niterói</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS principal do sistema -->
     <link rel="stylesheet" href="style.css">
-    
+
+    <!-- Bibliotecas externas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -16,34 +20,74 @@
 </head>
 <body id="app-body">
 
+    <!-- ===================== TELA DE LOGIN ===================== -->
+    <div id="login-screen" class="login-overlay">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="login-logo">📦</div>
+                <h1>LogMaster Pro</h1>
+                <p>Sistema de Gestão de Estoque</p>
+            </div>
+
+            <form id="form-login" onsubmit="auth.login(event)">
+                <div class="form-group">
+                    <label for="login-user">Usuário</label>
+                    <input type="text" id="login-user" placeholder="Digite seu usuário" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-pass">Senha</label>
+                    <input type="password" id="login-pass" placeholder="Digite sua senha" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn-primary">Entrar</button>
+                <p id="login-error" class="login-error"></p>
+            </form>
+
+            <div class="login-footer">
+                <small>Primeiro acesso? Use: <strong>admin</strong> / <strong>admin123</strong></small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de carregamento -->
     <div id="loading-screen">
         <div style="font-size: 3rem;">🚚</div>
         <div style="font-weight: 800; color: #4f46e5; margin-top: 20px;">LogMaster Pro v14.3</div>
         <div style="color: #64748b; font-size: 14px;">Carregando sistema SEMOBI...</div>
     </div>
 
+    <!-- ===================== CABEÇALHO ===================== -->
     <header class="header">
         <div class="container header-inner">
             <div class="logo">🚚 LogMaster <span>Pro</span></div>
+
             <nav class="nav-tabs">
                 <button id="tab-inventory" class="tab-btn active" onclick="ui.switchView('inventory')">Estoque</button>
                 <button id="tab-shopping" class="tab-btn" onclick="ui.switchView('shopping')">Compras</button>
                 <button id="tab-admin" class="tab-btn" onclick="ui.switchView('admin')">Gestão</button>
             </nav>
+
             <div class="header-right">
                 <button class="btn-theme" onclick="ui.toggleDarkMode()">🌓</button>
-                <span class="user-chip">Jefferson (Administrador)</span>
+
+                <!-- Usuário logado -->
+                <div class="user-badge" id="logged-user-badge">
+                    <span id="logged-user-name">---</span>
+                    <span class="user-role" id="logged-user-role">---</span>
+                    <button class="btn-logout" onclick="auth.logout()">Sair</button>
+                </div>
             </div>
         </div>
     </header>
 
+    <!-- ===================== CONTEÚDO PRINCIPAL ===================== -->
     <main class="container main-content">
         
+        <!-- ===== ABA ESTOQUE ===== -->
         <section id="view-inventory" class="view-sec">
             <div class="header-tools-modern">
                 <div class="search-wrapper">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="search-input" placeholder="Pesquisar insumo, categoria ou código..." oninput="app.filter()">
+                    <input type="text" id="search-input" placeholder="Pesquisar insumo, categoria..." oninput="app.filter()">
                 </div>
             </div>
 
@@ -58,12 +102,12 @@
                             <th width="320" class="text-right">Ações Rápidas</th>
                         </tr>
                     </thead>
-                    <tbody id="stock-list">
-                        </tbody>
+                    <tbody id="stock-list"></tbody>
                 </table>
             </div>
         </section>
 
+        <!-- ===== ABA COMPRAS ===== -->
         <section id="view-shopping" class="view-sec hidden">
             <div class="view-header">
                 <h3>🛒 Inteligência Preditiva de Reposição</h3>
@@ -79,18 +123,22 @@
                             <th class="text-right">Data Limite Sugerida</th>
                         </tr>
                     </thead>
-                    <tbody id="shopping-list">
-                        </tbody>
+                    <tbody id="shopping-list"></tbody>
                 </table>
             </div>
         </section>
 
+        <!-- ===== ABA GESTÃO ===== -->
         <section id="view-admin" class="view-sec hidden">
             <div class="admin-grid">
+
                 <div class="admin-main">
+                    <!-- Monitoramento de alertas -->
                     <div class="dashboard-card">
                         <h4>⏳ Monitoramento de Alertas Críticos</h4>
-                        <p style="font-size: 11px; color: #64748b; margin-bottom: 15px;">Itens abaixo do mínimo há mais de 10 dias. O check ✅ indica notificação enviada hoje.</p>
+                        <p style="font-size: 11px; color: #64748b; margin-bottom: 15px;">
+                            Itens abaixo do mínimo há mais de 10 dias. O check ✅ indica notificação enviada hoje.
+                        </p>
                         <div class="log-table-wrapper">
                             <table class="minimal-table">
                                 <thead>
@@ -100,27 +148,57 @@
                                         <th class="text-right">Ação Manual</th>
                                     </tr>
                                 </thead>
-                                <tbody id="alert-countdown-list">
-                                    </tbody>
+                                <tbody id="alert-countdown-list"></tbody>
                             </table>
                         </div>
                     </div>
 
+                    <!-- Gráfico de categorias -->
                     <div class="dashboard-card">
-                        <h4>📊 Saídas Mensais por Categoria (Últimos 15 dias)</h4>
+                        <h4>📊 Saídas por Categoria (Últimos 15 dias)</h4>
                         <div class="chart-box" style="position: relative; height: 300px;">
                             <canvas id="adminChart15"></canvas>
                         </div>
                     </div>
+
+                    <!-- Gerenciamento de usuários -->
+                    <div class="users-section" id="users-management">
+                        <h3>👥 Gerenciamento de Usuários</h3>
+                        
+                        <div class="user-form-inline">
+                            <input type="text" id="new-user-name" placeholder="Nome de usuário">
+                            <input type="password" id="new-user-pass" placeholder="Senha">
+                            <select id="new-user-role">
+                                <option value="operador">Operador</option>
+                                <option value="supervisor">Supervisor</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                            <button class="btn-primary" onclick="auth.createUser()">+ Criar Usuário</button>
+                        </div>
+                        
+                        <table class="minimal-table">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Nível de Acesso</th>
+                                    <th>Criado em</th>
+                                    <th class="text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-list">
+                                <tr><td colspan="4" class="text-center">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div class="admin-aside">
+                <aside class="admin-aside">
                     <div class="dashboard-card">
                         <h4>📧 Configuração de Notificações</h4>
                         <div class="field">
                             <label>E-mail do Responsável SEMOBI</label>
                             <input type="email" id="alert-email-input" placeholder="exemplo@niteroi.rj.gov.br">
-                            <button class="btn-primary-auth" style="margin-top:10px; padding:10px;" onclick="app.saveAlertConfig()">Salvar E-mail</button>
+                            <button class="btn-primary" style="margin-top:10px; padding:10px;" onclick="app.saveAlertConfig()">Salvar E-mail</button>
                         </div>
                     </div>
 
@@ -146,17 +224,21 @@
                             <span>📊</span> Gerar Relatório Técnico (PDF)
                         </button>
                     </div>
-                </div>
+                </aside>
             </div>
         </section>
     </main>
 
+    <!-- ===================== RODAPÉ ===================== -->
     <footer class="footer-copyright">
         <div class="container">
             <p>&copy; 2025 SEMOBI Niterói - LogMaster Pro. Todos os direitos reservados. Uso exclusivo interno.</p>
         </div>
     </footer>
 
+    <!-- ===================== MODAIS ===================== -->
+
+    <!-- Modal Histórico / Análise -->
     <div id="modal-history" class="modal-overlay hidden">
         <div class="modal-card-floating large">
             <div class="modal-header">
@@ -214,6 +296,7 @@
         </div>
     </div>
 
+    <!-- Modal Produto -->
     <div id="modal-product" class="modal-overlay hidden">
         <div class="modal-card-floating">
             <div class="modal-header">
@@ -241,11 +324,12 @@
                     <input type="file" id="p-image-input" accept="image/png, image/jpeg" onchange="app.handleImage(this)">
                     <small id="img-status" style="color:#64748b; display:block; margin-top:5px;">Aguardando seleção de arquivo...</small>
                 </div>
-                <button type="submit" class="btn-primary-auth">Confirmar e Salvar</button>
+                <button type="submit" class="btn-primary">Confirmar e Salvar</button>
             </form>
         </div>
     </div>
 
+    <!-- Modal Movimentação -->
     <div id="modal-move" class="modal-overlay hidden">
         <div class="modal-card-floating small">
             <div class="modal-header">
@@ -272,11 +356,12 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn-primary-auth">Confirmar Lançamento</button>
+                <button type="submit" class="btn-primary">Confirmar Lançamento</button>
             </form>
         </div>
     </div>
 
+    <!-- Modal Categorias -->
     <div id="modal-categories" class="modal-overlay hidden">
         <div class="modal-card-floating">
             <div class="modal-header">
@@ -288,19 +373,19 @@
                     <label>Adicionar Nova Categoria</label>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="new-cat-name" placeholder="Ex: Limpeza">
-                        <button class="btn-primary-auth" style="width:auto; padding:0 20px;" onclick="app.addCategory()">Salvar</button>
+                        <button class="btn-primary" style="width:auto; padding:0 20px;" onclick="app.addCategory()">Salvar</button>
                     </div>
                 </div>
                 <div class="log-table-wrapper" style="max-height: 300px; overflow-y: auto;">
                     <table class="minimal-table">
-                        <tbody id="categories-list">
-                            </tbody>
+                        <tbody id="categories-list"></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal Auditoria -->
     <div id="modal-audit" class="modal-overlay hidden">
         <div class="modal-card-floating large">
             <div class="modal-header">
@@ -317,17 +402,18 @@
                             <th>Insumo/Detalhes</th>
                         </tr>
                     </thead>
-                    <tbody id="audit-list">
-                        </tbody>
+                    <tbody id="audit-list"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- Template oculto para PDF -->
     <div id="pdf-template" style="display:none; padding:40px; background:white; color:black;">
         <div id="pdf-content"></div>
     </div>
 
+    <!-- JS principal -->
     <script src="script.js"></script>
 </body>
 </html>
