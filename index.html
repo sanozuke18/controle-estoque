@@ -1,164 +1,331 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LogMaster Pro v3.9 - Gestão Niterói</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>LogMaster Pro v14.3 - SEMOBI Niterói</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
-<body>
+<body id="app-body">
 
-    <div id="auth-screen" class="modal-overlay">
-        <div class="modal-card auth-card">
-            <div class="auth-header">
-                <span class="auth-emoji">🏢</span>
-                <h2>LogMaster Pro</h2>
-                <p>Niterói - Gestão TI SEMOBI</p>
-            </div>
-            <form id="login-form">
-                <div class="field">
-                    <label>E-mail Corporativo</label>
-                    <input type="email" id="login-email" required placeholder="exemplo@niteroi.rj.gov.br">
-                </div>
-                <div class="field">
-                    <label>Senha de Acesso</label>
-                    <input type="password" id="login-password" required placeholder="••••••">
-                </div>
-                <button type="submit" class="btn-primary full-width" id="btn-auth-submit">Entrar no Sistema</button>
-                <div class="auth-footer">
-                    <a href="#" onclick="ui.toggleAuthMode()" id="auth-toggle">Novo por aqui? Criar conta</a>
-                </div>
-            </form>
-        </div>
+    <div id="loading-screen">
+        <div style="font-size: 3rem;">🚚</div>
+        <div style="font-weight: 800; color: #4f46e5; margin-top: 20px;">LogMaster Pro v14.3</div>
+        <div style="color: #64748b; font-size: 14px;">Carregando sistema SEMOBI...</div>
     </div>
 
     <header class="header">
         <div class="container header-inner">
-            <div class="logo">
-                <span class="logo-icon">🚚</span>
-                <span class="logo-text">LogMaster <small>v3.9</small></span>
-            </div>
-            
-            <div class="search-bar">
-                <input type="text" id="search-input" placeholder="🔍 Buscar por nome ou categoria..." oninput="app.filterProducts()">
-            </div>
-
-            <div class="nav-controls">
-                <span id="user-info" class="user-chip"></span>
-                <button class="btn-ghost admin-only hidden" onclick="app.loadUsers(); ui.openModal('users-mgmt')">Acessos</button>
-                
-                <div class="export-group admin-only hidden">
-                    <button class="btn-export" onclick="app.exportInventory()" title="Exportar Inventário">📋 Inventário</button>
-                    <button class="btn-export" onclick="app.exportHistory()" title="Exportar Histórico Mensal">📅 Histórico</button>
-                </div>
-
-                <button class="btn-primary admin-only hidden" onclick="ui.openModal('product')">+ Novo</button>
-                <button class="btn-danger-light" onclick="auth.logout()">Sair</button>
+            <div class="logo">🚚 LogMaster <span>Pro</span></div>
+            <nav class="nav-tabs">
+                <button id="tab-inventory" class="tab-btn active" onclick="ui.switchView('inventory')">Estoque</button>
+                <button id="tab-shopping" class="tab-btn" onclick="ui.switchView('shopping')">Compras</button>
+                <button id="tab-admin" class="tab-btn" onclick="ui.switchView('admin')">Gestão</button>
+            </nav>
+            <div class="header-right">
+                <button class="btn-theme" onclick="ui.toggleDarkMode()">🌓</button>
+                <span class="user-chip">Jefferson (Administrador)</span>
             </div>
         </div>
     </header>
 
-    <main class="container">
-        <div id="pending-msg" class="alert-box hidden">
-            <strong>Acesso em Análise:</strong> Sua conta aguarda aprovação administrativa.
-        </div>
+    <main class="container main-content">
+        
+        <section id="view-inventory" class="view-sec">
+            <div class="header-tools-modern">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Pesquisar insumo, categoria ou código..." oninput="app.filter()">
+                </div>
+            </div>
 
-        <div id="main-content" class="content-card hidden">
-            <table class="inventory-table">
-                <thead>
-                    <tr>
-                        <th width="70">Foto</th>
-                        <th>Descrição</th>
-                        <th>Categoria</th>
-                        <th>Saldo</th>
-                        <th class="text-right">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="stock-list"></tbody>
-            </table>
-        </div>
+            <div id="main-content" class="table-container">
+                <table class="inventory-table">
+                    <thead>
+                        <tr>
+                            <th width="85">Foto</th>
+                            <th>Produto</th>
+                            <th>Categoria</th>
+                            <th>Saldo Atual</th>
+                            <th width="320" class="text-right">Ações Rápidas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-list">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-shopping" class="view-sec hidden">
+            <div class="view-header">
+                <h3>🛒 Inteligência Preditiva de Reposição</h3>
+            </div>
+            <div class="table-container">
+                <table class="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Saldo / Mínimo</th>
+                            <th>Consumo Médio (15d)</th>
+                            <th>Duração Estimada</th>
+                            <th class="text-right">Data Limite Sugerida</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shopping-list">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-admin" class="view-sec hidden">
+            <div class="admin-grid">
+                <div class="admin-main">
+                    <div class="dashboard-card">
+                        <h4>⏳ Monitoramento de Alertas Críticos</h4>
+                        <p style="font-size: 11px; color: #64748b; margin-bottom: 15px;">Itens abaixo do mínimo há mais de 10 dias. O check ✅ indica notificação enviada hoje.</p>
+                        <div class="log-table-wrapper">
+                            <table class="minimal-table">
+                                <thead>
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th>Tempo em Alerta</th>
+                                        <th class="text-right">Ação Manual</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alert-countdown-list">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h4>📊 Saídas Mensais por Categoria (Últimos 15 dias)</h4>
+                        <div class="chart-box" style="position: relative; height: 300px;">
+                            <canvas id="adminChart15"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-aside">
+                    <div class="dashboard-card">
+                        <h4>📧 Configuração de Notificações</h4>
+                        <div class="field">
+                            <label>E-mail do Responsável SEMOBI</label>
+                            <input type="email" id="alert-email-input" placeholder="exemplo@niteroi.rj.gov.br">
+                            <button class="btn-primary-auth" style="margin-top:10px; padding:10px;" onclick="app.saveAlertConfig()">Salvar E-mail</button>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h4>🛠️ Ferramentas Administrativas</h4>
+                        <button class="btn-tile" onclick="app.openAddModal()">
+                            <span>➕</span> Novo Insumo
+                        </button>
+                        <button class="btn-tile" onclick="ui.openModal('categories')">
+                            <span>📁</span> Gerenciar Categorias
+                        </button>
+                        <button class="btn-tile" onclick="app.loadAuditLogs(); ui.openModal('audit')">
+                            <span>🛡️</span> Auditoria Geral
+                        </button>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h4>💾 Exportação de Dados</h4>
+                        <button class="btn-tile" onclick="app.exportCSV()">
+                            <span>📄</span> Baixar Planilha de Saldo (CSV)
+                        </button>
+                        <button class="btn-tile" onclick="app.generatePDF()">
+                            <span>📊</span> Gerar Relatório Técnico (PDF)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <div id="modal-users-mgmt" class="modal-overlay hidden">
-        <div class="modal-card large">
+    <footer class="footer-copyright">
+        <div class="container">
+            <p>&copy; 2025 SEMOBI Niterói - LogMaster Pro. Todos os direitos reservados. Uso exclusivo interno.</p>
+        </div>
+    </footer>
+
+    <div id="modal-history" class="modal-overlay hidden">
+        <div class="modal-card-floating large">
             <div class="modal-header">
-                <h3>Permissões de Usuários</h3>
-                <button class="close-btn" onclick="ui.closeModal('users-mgmt')">&times;</button>
+                <h3 id="history-header">Análise de Fluxo do Produto</h3>
+                <button class="close-btn-header" onclick="ui.closeModal('history')">&times;</button>
             </div>
-            <div class="table-scroll">
-                <table class="sub-table">
-                    <thead><tr><th>E-mail</th><th>Função</th><th>Mudar para...</th></tr></thead>
-                    <tbody id="user-admin-list"></tbody>
-                </table>
+            <div class="analysis-wrapper">
+                <div class="analysis-main">
+                    <div class="kpi-row">
+                        <div class="kpi-card" id="kpi-7" onclick="app.filterHistory(7)">
+                            <span>Média Diária (7d)</span>
+                            <strong id="avg-7">0</strong>
+                        </div>
+                        <div class="kpi-card highlight" id="kpi-15" onclick="app.filterHistory(15)">
+                            <span>Média Diária (15d)</span>
+                            <strong id="avg-15">0</strong>
+                        </div>
+                        <div class="kpi-card" id="kpi-30" onclick="app.filterHistory(30)">
+                            <span>Média Diária (30d)</span>
+                            <strong id="avg-30">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="chart-canvas-container" style="position: relative; height: 260px;">
+                        <canvas id="usageChart"></canvas>
+                    </div>
+
+                    <div class="log-section">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h4 id="log-title">Histórico de Movimentações</h4>
+                            <button onclick="app.filterHistory(15)" class="btn-outline-small">Limpar Filtro de Data</button>
+                        </div>
+                        <div class="log-table-wrapper">
+                            <table class="minimal-table">
+                                <thead>
+                                    <tr>
+                                        <th width="140">Data/Hora</th>
+                                        <th width="100">Tipo</th>
+                                        <th width="80">Qtd</th>
+                                        <th>Setor/Destino</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-content"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="analysis-sidebar">
+                    <h4>📅 Calendário de Uso</h4>
+                    <p style="font-size:10px; color:#64748b; margin-bottom:12px;">Clique nos dias destacados (azul) para filtrar os registros.</p>
+                    <div id="calendar-root" class="calendar-widget"></div>
+                </aside>
             </div>
         </div>
     </div>
 
     <div id="modal-product" class="modal-overlay hidden">
-        <div class="modal-card">
-            <h2 id="modal-product-title">Detalhes do Item</h2>
-            <form id="form-product">
-                <input type="hidden" id="p-edit-id">
-                <div class="field"><label>Nome do Produto</label><input type="text" id="p-name" required></div>
-                <div class="field"><label>Categoria</label><input type="text" id="p-category" required></div>
-                <div class="field"><label>Estoque Mínimo (Alerta)</label><input type="number" id="p-min" required></div>
-                <div class="field"><label>Foto</label><input type="file" onchange="app.handleImage(this)"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-link" onclick="ui.closeModal('product')">Voltar</button>
-                    <button type="submit" class="btn-primary">Salvar</button>
+        <div class="modal-card-floating">
+            <div class="modal-header">
+                <h3 id="product-modal-title">Dados do Insumo</h3>
+                <button class="close-btn-header" onclick="app.closeProductModal()">&times;</button>
+            </div>
+            <form id="form-product" class="modal-body" style="padding: 30px;">
+                <input type="hidden" id="p-id">
+                <div class="field">
+                    <label>Nome do Produto</label>
+                    <input type="text" id="p-name" required placeholder="Ex: Papel A4">
                 </div>
+                <div class="field">
+                    <label>Categoria Fixa</label>
+                    <select id="p-category" required style="width:100%; padding:14px; border-radius:12px; font-weight:600; background:var(--bg); border:2px solid var(--border);">
+                        <option value="">Carregando...</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Estoque Mínimo (Alerta)</label>
+                    <input type="number" id="p-min" required placeholder="Ex: 10">
+                </div>
+                <div class="field">
+                    <label>Foto do Produto (PNG/JPG Compactado)</label>
+                    <input type="file" id="p-image-input" accept="image/png, image/jpeg" onchange="app.handleImage(this)">
+                    <small id="img-status" style="color:#64748b; display:block; margin-top:5px;">Aguardando seleção de arquivo...</small>
+                </div>
+                <button type="submit" class="btn-primary-auth">Confirmar e Salvar</button>
             </form>
         </div>
     </div>
 
     <div id="modal-move" class="modal-overlay hidden">
-        <div class="modal-card">
-            <h2 id="move-title">Movimentar</h2>
-            <form id="form-move">
-                <input type="hidden" id="move-product-id"><input type="hidden" id="move-type">
-                <div class="field"><label>Quantidade</label><input type="number" id="move-qty" min="1" required></div>
+        <div class="modal-card-floating small">
+            <div class="modal-header">
+                <h3>Registro de Movimentação</h3>
+                <button class="close-btn-header" onclick="ui.closeModal('move')">&times;</button>
+            </div>
+            <form id="form-move" class="modal-body" style="padding: 30px;">
+                <input type="hidden" id="move-id">
+                <input type="hidden" id="move-type">
+                
+                <div class="field">
+                    <label id="move-label">Quantidade</label>
+                    <input type="number" id="move-qty" required min="1" placeholder="Qtd">
+                </div>
+
                 <div id="extra-fields" class="hidden">
-                    <div class="field"><label>Setor / Destino</label><input type="text" id="move-sector" placeholder="Ex: Manutenção Centro"></div>
+                    <div class="field">
+                        <label>Setor Destino (Sigla/Nome)</label>
+                        <input type="text" id="move-sector" placeholder="Ex: ADM, CEM, GAB">
+                    </div>
+                    <div class="field">
+                        <label>Número do Processo (SEI/Físico)</label>
+                        <input type="text" id="move-process" placeholder="Ex: 99/000.000/2025">
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-link" onclick="ui.closeModal('move')">Cancelar</button>
-                    <button type="submit" id="btn-confirm-move" class="btn-primary">Confirmar</button>
-                </div>
+
+                <button type="submit" class="btn-primary-auth">Confirmar Lançamento</button>
             </form>
         </div>
     </div>
 
-    <div id="modal-history" class="modal-overlay hidden">
-        <div class="modal-card large">
+    <div id="modal-categories" class="modal-overlay hidden">
+        <div class="modal-card-floating">
             <div class="modal-header">
-                <h2 id="history-header">Análise de Fluxo</h2>
-                <button class="close-btn" onclick="ui.closeModal('history')">&times;</button>
+                <h3>Categorias Oficiais</h3>
+                <button class="close-btn-header" onclick="ui.closeModal('categories')">&times;</button>
             </div>
-            
-            <div class="analysis-grid">
-                <div class="chart-container">
-                    <div style="height:350px; width:100%;">
-                        <canvas id="usageChart"></canvas>
+            <div class="modal-body" style="padding: 25px;">
+                <div class="field">
+                    <label>Adicionar Nova Categoria</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="new-cat-name" placeholder="Ex: Limpeza">
+                        <button class="btn-primary-auth" style="width:auto; padding:0 20px;" onclick="app.addCategory()">Salvar</button>
                     </div>
                 </div>
-                <div class="kpi-panel">
-                    <div class="kpi-card"><span>Média 7d</span><strong id="avg-7">0</strong></div>
-                    <div class="kpi-card"><span>Média 30d</span><strong id="avg-30">0</strong></div>
+                <div class="log-table-wrapper" style="max-height: 300px; overflow-y: auto;">
+                    <table class="minimal-table">
+                        <tbody id="categories-list">
+                            </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="log-history">
-                <h4>Logs Recentes</h4>
-                <div id="history-content" class="feed"></div>
+    <div id="modal-audit" class="modal-overlay hidden">
+        <div class="modal-card-floating large">
+            <div class="modal-header">
+                <h3>Registro Geral de Auditoria</h3>
+                <button class="close-btn-header" onclick="ui.closeModal('audit')">&times;</button>
+            </div>
+            <div class="modal-body-scroll">
+                <table class="minimal-table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Usuário Responsável</th>
+                            <th>Tipo de Ação</th>
+                            <th>Insumo/Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-list">
+                        </tbody>
+                </table>
             </div>
         </div>
+    </div>
+
+    <div id="pdf-template" style="display:none; padding:40px; background:white; color:black;">
+        <div id="pdf-content"></div>
     </div>
 
     <script src="script.js"></script>
