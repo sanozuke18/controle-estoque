@@ -89,7 +89,6 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x:
 
 /* ===============================================================
    LAYOUT DO MODAL DE HISTÓRICO (DESIGN MELHORADO v17.6)
-   - Cria um grid de 2 colunas para separar dados e calendário
 =============================================================== */
 .analysis-wrapper { 
     display: grid; 
@@ -135,8 +134,16 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x:
 .badge-safe { background: rgba(16,185,129,0.08); color: #047857; }
 .badge-critical { background: rgba(239,68,68,0.08); color: #b91c1c; }
 
-/* Login */
-.login-overlay { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+/* Login (CORRIGIDO) */
+.login-overlay { 
+    position: fixed; 
+    inset: 0; 
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
+    display: flex; /* Adicionado para centralizar */
+    align-items: center; /* Adicionado para centralizar */
+    justify-content: center; /* Adicionado para centralizar */
+    z-index: 9999; /* Garante que fica na frente de tudo */
+}
 .login-container { background: white; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; text-align: center; }
 .login-header { margin-bottom: 30px; }
 .login-logo { font-size: 48px; margin-bottom: 10px; }

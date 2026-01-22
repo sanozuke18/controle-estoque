@@ -142,7 +142,18 @@
                     </div>
 
                     <div class="dashboard-card">
-                        <h4>📊 Saídas por Categoria (Últimos 15 dias)</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                            <h4 id="chart-title" style="margin: 0;">📊 Saídas por Categoria (15d)</h4>
+                            
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <button class="btn-outline-small" onclick="app.showCategorySummaries(7)">7d</button>
+                                <button class="btn-outline-small" onclick="app.showCategorySummaries(15)">15d</button>
+                                <button class="btn-outline-small" onclick="app.showCategorySummaries(30)">30d</button>
+                                <input type="date" id="chart-date-picker" onchange="app.showCategorySummaries(null, this.value)" 
+                                       style="padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 11px; color: var(--text); background: var(--bg);">
+                            </div>
+                        </div>
+
                         <div class="chart-box" style="position: relative; height: 300px;">
                             <canvas id="adminChart15"></canvas>
                         </div>
@@ -264,7 +275,7 @@
                                         <th width="100">Tipo</th>
                                         <th width="80">Qtd</th>
                                         <th>Setor/Destino</th>
-                                    </tr>
+                                        <th>Usuário</th> </tr>
                                 </thead>
                                 <tbody id="history-content"></tbody>
                             </table>
@@ -386,6 +397,13 @@
                     <tbody id="audit-list"></tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <div id="modal-image-zoom" class="modal-overlay hidden" onclick="ui.closeModal('image-zoom')" style="z-index: 9999; background: rgba(0,0,0,0.85);">
+        <div style="max-width: 90%; max-height: 90%; position: relative;">
+            <img id="zoomed-image-target" src="" style="width: auto; height: auto; max-width: 100%; max-height: 90vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <p style="text-align:center; color:white; margin-top:10px; font-size:14px;">Clique em qualquer lugar para fechar</p>
         </div>
     </div>
 

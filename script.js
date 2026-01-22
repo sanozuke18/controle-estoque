@@ -1,5 +1,5 @@
 /* =================================================================
-   LOGMASTER PRO v17.6 - SCRIPT INTEGRAL (SEM CORTES)
+   LOGMASTER PRO v17.6 - SCRIPT OTIMIZADO (COM USUÁRIO NO HISTÓRICO)
 ================================================================= */
 
 // Configuração do Firebase
@@ -24,6 +24,7 @@ const EMAILJS_TEMPLATE_ID = "template_04ocb0p";
 
 // Variáveis de Estado
 let fullInventory = [];
+let recentExitHistory = [];
 let myChart = null;
 let adminChart15 = null;
 let categories = [];
@@ -234,7 +235,6 @@ const auth = {
             btn.classList.toggle('permission-hidden', !p.exportReports);
         });
 
-        // Gestão de usuários: oculta seção se não for admin
         const usersSection = document.getElementById('users-management');
         if (usersSection) {
             usersSection.classList.toggle('permission-hidden', !p.manageUsers);
@@ -364,10 +364,11 @@ const auth = {
     }
 };
 
-/* ===================== APP PRINCIPAL (SEU CÓDIGO ORIGINAL) ===================== */
+/* ===================== APP PRINCIPAL ===================== */
 
 const app = {
     init() {
+        // Carrega configurações de alerta
         db.collection('config').doc('alerts').onSnapshot(doc => {
             if (doc.exists()) {
                 alertConfig = doc.data();
@@ -376,6 +377,7 @@ const app = {
             }
         });
 
+        // 1. OUVINTE DE PRODUTOS (ESTOQUE)
         db.collection('produtos').orderBy('name').onSnapshot(snap => {
             fullInventory = [];
             snap.forEach(doc => fullInventory.push({ id: doc.id, ...doc.data() }));
@@ -384,15 +386,33 @@ const app = {
             this.renderShoppingList(fullInventory);
             this.renderAlertCountdown();
             this.checkTenDayAlerts();
-            
-            const adminView = document.getElementById('view-admin');
-            if (adminView && !adminView.classList.contains('hidden')) {
-                this.showCategorySummaries();
-            }
         }, error => {
             console.error("Erro ao buscar produtos:", error);
         });
 
+        // 2. OUVINTE DE HISTÓRICO (INTELIGÊNCIA)
+        const limitDate = new Date();
+        limitDate.setDate(limitDate.getDate() - 45);
+
+        db.collection('historico')
+            .where('type', '==', 'SAIDA')
+            .where('timestamp', '>=', limitDate)
+            .orderBy('timestamp', 'desc')
+            .onSnapshot(snap => {
+                recentExitHistory = [];
+                snap.forEach(doc => recentExitHistory.push(doc.data()));
+                
+                this.renderShoppingList(fullInventory);
+                
+                const adminView = document.getElementById('view-admin');
+                if (adminView && !adminView.classList.contains('hidden')) {
+                    this.showCategorySummaries(15);
+                }
+            }, error => {
+                console.error("Erro ao carregar histórico:", error);
+            });
+
+        // 3. OUVINTE DE CATEGORIAS
         db.collection('categorias').orderBy('name').onSnapshot(snap => {
             categories = [];
             snap.forEach(doc => categories.push({ id: doc.id, ...doc.data() }));
@@ -642,10 +662,17 @@ const app = {
 
             const canEdit = auth.can('editProduct');
             const canDelete = auth.can('deleteProduct');
+            const imgUrl = item.photo || 'https://via.placeholder.com/50?text=Sem+Foto';
 
             return `
                 <tr class="${rowClass}" onclick="app.showHistory('${item.id}', '${item.name}')" title="Clique para ver análise detalhada">
-                    <td><img src="${item.photo || 'https://via.placeholder.com/50?text=Sem+Foto'}" class="img-thumb" alt="${item.name}"></td>
+                    <td>
+                        <img src="${imgUrl}" 
+                             class="img-thumb" 
+                             alt="${item.name}" 
+                             style="cursor: zoom-in;" 
+                             onclick="event.stopPropagation(); ui.openImageZoom('${imgUrl}')">
+                    </td>
                     <td><strong>${item.name}</strong></td>
                     <td><span style="background:#f1f5f9; padding: 4px 10px; border-radius: 12px; font-size:12px;">${item.category}</span></td>
                     <td><strong style="font-size: 1.1rem;">${qty}</strong> <span style="font-size:11px; color:#64748b;">(Mín: ${min})</span></td>
@@ -732,12 +759,13 @@ const app = {
         this.renderTimeline(filtered);
     },
 
+    // MUDANÇA AQUI: Adicionada a célula do usuário responsável
     renderTimeline(logs) {
         const tbody = document.getElementById('history-content');
         if (!tbody) return;
 
         if (logs.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; color:#94a3b8; padding:15px;'>Nenhuma movimentação no período selecionado.</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; color:#94a3b8; padding:15px;'>Nenhuma movimentação no período selecionado.</td></tr>";
             return;
         }
         tbody.innerHTML = logs.map(l => `
@@ -746,6 +774,7 @@ const app = {
                 <td><span style="color:${l.type === 'SAIDA' ? 'var(--warning)' : 'var(--success)'}; font-weight:800; font-size:11px; text-transform:uppercase;">${l.type}</span></td>
                 <td><strong>${l.qty}</strong></td>
                 <td><span style="color:#64748b; font-size:12px;">${l.sector || '-'}</span></td>
+                <td style="font-size:12px; font-weight:600; color:#4f46e5;">${l.employee || '-'}</td>
             </tr>
         `).join('');
     },
@@ -856,28 +885,26 @@ const app = {
         this.renderCalendar();
     },
 
-    async renderShoppingList(items) {
-        const limitDate = new Date();
-        limitDate.setDate(limitDate.getDate() - 15);
-
-        const historySnap = await db.collection('historico')
-            .where('type', '==', 'SAIDA')
-            .where('timestamp', '>=', limitDate)
-            .get();
-
-        const usageMap = {};
-        historySnap.forEach(doc => {
-            const data = doc.data();
-            usageMap[data.productId] = (usageMap[data.productId] || 0) + Number(data.qty);
-        });
-
+    renderShoppingList(items) {
         const tbody = document.getElementById('shopping-list');
         if (!tbody) return;
 
         if (items.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='5' class='text-center'>Nenhum dado para análise.</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='5' class='text-center'>Nenhum dado para análise (Estoque vazio).</td></tr>";
             return;
         }
+
+        const limitDate = new Date();
+        limitDate.setDate(limitDate.getDate() - 15);
+        
+        const recentLogs = recentExitHistory.filter(l => 
+            l.timestamp && l.timestamp.toDate() >= limitDate
+        );
+
+        const usageMap = {};
+        recentLogs.forEach(data => {
+            usageMap[data.productId] = (usageMap[data.productId] || 0) + Number(data.qty);
+        });
 
         tbody.innerHTML = items.map(i => {
             const totalUsage15d = usageMap[i.id] || 0;
@@ -911,7 +938,7 @@ const app = {
                             <span style="font-size:10px; color:#64748b;">Mínimo: ${i.minThreshold}</span>
                         </div>
                     </td>
-                    <td>${dailyAvg > 0 ? dailyAvg.toFixed(1) + ' / dia' : '<span style="color:#94a3b8;">Sem consumo</span>'}</td>
+                    <td>${dailyAvg > 0 ? dailyAvg.toFixed(1) + ' / dia' : '<span style="color:#94a3b8;">Sem consumo recente</span>'}</td>
                     <td><span class="badge-predict ${badgeClass}">${daysDisplay}</span></td>
                     <td class="text-right" style="font-weight:700; color: var(--text);">${dateLimitStr}</td>
                 </tr>
@@ -932,8 +959,20 @@ const app = {
 
         const now = new Date();
         tbody.innerHTML = lowStockItems.map(i => {
-            const lowSinceDate = i.lowStockSince ? i.lowStockSince.toDate() : now;
+            let lowSinceDate = now;
+            
+            if (i.lowStockSince) {
+                if (typeof i.lowStockSince.toDate === 'function') {
+                    lowSinceDate = i.lowStockSince.toDate();
+                } else if (i.lowStockSince instanceof Date) {
+                    lowSinceDate = i.lowStockSince;
+                } else {
+                    lowSinceDate = new Date(i.lowStockSince);
+                }
+            }
+
             const daysInAlert = Math.floor((now - lowSinceDate) / (24 * 60 * 60 * 1000));
+            const displayDays = isNaN(daysInAlert) || daysInAlert < 0 ? 0 : daysInAlert;
             
             const hasSentInSession = sessionManualAlerts[i.id] ? " ✅ Enviado" : "";
             const disabledAttr = sessionManualAlerts[i.id] ? "disabled style='opacity:0.6; cursor:not-allowed;'" : "";
@@ -941,7 +980,7 @@ const app = {
             return `
                 <tr>
                     <td><strong>${i.name}</strong><br><small style="color:#64748b;">Saldo: ${i.qty} (Mín: ${i.minThreshold})</small></td>
-                    <td><span style="font-weight:700; color:${daysInAlert >= 10 ? 'var(--danger)' : 'var(--warning)'};">${daysInAlert} dias</span></td>
+                    <td><span style="font-weight:700; color:${displayDays >= 10 ? 'var(--danger)' : 'var(--warning)'};">${displayDays} dias</span></td>
                     <td class="text-right">
                         <button class="btn-outline-small" ${disabledAttr} onclick="app.sendManualAlert('${i.id}', '${i.name}', ${i.qty}, ${i.minThreshold})">
                             DISPARAR ALERTA${hasSentInSession}
@@ -990,9 +1029,11 @@ const app = {
                     return;
                 }
 
-                const timeInAlert = now - p.lowStockSince.toDate();
+                const lowStockDate = p.lowStockSince.toDate ? p.lowStockSince.toDate() : new Date(p.lowStockSince);
+                const timeInAlert = now - lowStockDate;
+                
                 if (timeInAlert >= TEN_DAYS_MS) {
-                    const lastAlertDate = p.lastAlertSent ? p.lastAlertSent.toDate() : new Date(0);
+                    const lastAlertDate = p.lastAlertSent ? (p.lastAlertSent.toDate ? p.lastAlertSent.toDate() : new Date(p.lastAlertSent)) : new Date(0);
                     const timeSinceLastEmail = now - lastAlertDate;
 
                     if (timeSinceLastEmail >= TEN_DAYS_MS) {
@@ -1044,8 +1085,10 @@ const app = {
         }
     },
 
-    async showCategorySummaries() {
+    showCategorySummaries(days = 15, specificDate = null) {
         const canvas = document.getElementById('adminChart15');
+        const titleEl = document.getElementById('chart-title');
+        
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         
@@ -1053,30 +1096,58 @@ const app = {
             adminChart15.destroy();
         }
 
-        const limitDate = new Date();
-        limitDate.setDate(limitDate.getDate() - 15);
+        let filteredLogs = [];
+        let labelTitle = "";
 
-        const historySnap = await db.collection('historico')
-            .where('type', '==', 'SAIDA')
-            .where('timestamp', '>=', limitDate)
-            .get();
+        if (specificDate) {
+            const dateParts = specificDate.split('-');
+            const year = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]) - 1; 
+            const day = parseInt(dateParts[2]);
+
+            const startOfDay = new Date(year, month, day, 0, 0, 0);
+            const endOfDay = new Date(year, month, day, 23, 59, 59);
+
+            filteredLogs = recentExitHistory.filter(l => 
+                l.timestamp && 
+                l.timestamp.toDate() >= startOfDay && 
+                l.timestamp.toDate() <= endOfDay
+            );
+            
+            labelTitle = `📊 Saídas por Categoria (${day}/${month+1}/${year})`;
+            
+            if(document.getElementById('chart-date-picker').value !== specificDate) {
+               document.getElementById('chart-date-picker').value = specificDate; 
+            }
+
+        } else {
+            const limitDate = new Date();
+            limitDate.setDate(limitDate.getDate() - days);
+            
+            filteredLogs = recentExitHistory.filter(l => 
+                l.timestamp && l.timestamp.toDate() >= limitDate
+            );
+            
+            labelTitle = `📊 Saídas por Categoria (${days}d)`;
+            const datePicker = document.getElementById('chart-date-picker');
+            if(datePicker) datePicker.value = "";
+        }
+
+        if(titleEl) titleEl.innerText = labelTitle;
 
         const categoryTotals = {};
-        historySnap.forEach(doc => {
-            const data = doc.data();
+        filteredLogs.forEach(data => {
             if (data.category) {
                 categoryTotals[data.category] = (categoryTotals[data.category] || 0) + data.qty;
             }
         });
-
-        if (Object.keys(categoryTotals).length === 0) return;
 
         adminChart15 = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: Object.keys(categoryTotals),
                 datasets: [{
-                    label: 'Total de Saídas (15d)',
+                    label: specificDate ? 'Total no Dia' : `Total de Saídas (${days || 15}d)`,
                     data: Object.values(categoryTotals),
                     backgroundColor: '#4f46e5',
                     borderRadius: 8,
@@ -1158,7 +1229,6 @@ const app = {
             categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
     },
 
-    /* --- CORREÇÃO: EXPORTAÇÃO EXCEL BRASILEIRO (v16.2/v17.3) --- */
     exportCSV() {
         if (!auth.can('exportReports')) {
             return alert('Você não tem permissão para exportar relatórios.');
@@ -1166,21 +1236,17 @@ const app = {
 
         if (fullInventory.length === 0) return alert("Nada para exportar.");
         
-        // Cabeçalho com separador ";" para Excel Brasileiro
         let csvContent = "ID do Produto;Nome;Categoria;Saldo Atual;Estoque Minimo;Status\n";
         
         fullInventory.forEach(p => {
             const status = Number(p.qty) <= Number(p.minThreshold) ? "CRITICO" : "OK";
-            const escapedName = p.name.replace(/;/g, ','); // Limpa ; do nome para não quebrar colunas
-            // Montagem da linha com ";" e aspas para segurança
+            const escapedName = p.name.replace(/;/g, ',');
             csvContent += `"${p.id}";"${escapedName}";"${p.category || 'N/A'}";${p.qty};${p.minThreshold};"${status}"\n`;
         });
 
-        // BLOCO CRÍTICO: Inserção de \uFEFF para forçar UTF-8 no Excel (Fix Acentos)
         const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         
-        // Nome do arquivo com data
         const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
         link.href = URL.createObjectURL(blob);
         link.download = `Estoque_SEMOBI_${dateStr}.csv`;
@@ -1316,7 +1382,7 @@ const ui = {
         if (tab) tab.classList.add('active');
         
         if (v === 'admin') {
-            app.showCategorySummaries();
+            app.showCategorySummaries(15);
         }
         window.scrollTo(0, 0);
     },
@@ -1333,6 +1399,15 @@ const ui = {
         if (!el) return;
         el.classList.add('hidden');
         document.body.style.overflow = '';
+    },
+    
+    openImageZoom(src) {
+        const modal = document.getElementById('modal-image-zoom');
+        const img = document.getElementById('zoomed-image-target');
+        if(!modal || !img) return;
+        
+        img.src = src;
+        modal.classList.remove('hidden');
     },
 
     toggleDarkMode() {
