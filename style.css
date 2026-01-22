@@ -1,5 +1,5 @@
 /* =========================================
-   LOGMASTER PRO v17.6 - ESTILO INTEGRAL
+   LOGMASTER PRO v17.6 - ESTILO INTEGRAL (RESPONSIVO)
 ========================================= */
 
 /* Variáveis de Tema e Cores */
@@ -55,7 +55,7 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x:
 .search-wrapper input { width: 100%; padding: 10px 14px 10px 32px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); font-size: 13px; color: var(--text); }
 .search-wrapper .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: #94a3b8; }
 
-/* Tabelas */
+/* Tabelas (Padrão Desktop) */
 .table-container { background: var(--card); border-radius: 18px; border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); overflow: hidden; }
 .inventory-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .inventory-table thead { background: #f8fafc; }
@@ -88,7 +88,7 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x:
 .btn-tile { width: 100%; padding: 10px 12px; display: flex; align-items: center; gap: 8px; border-radius: 12px; border: 1px dashed #cbd5f5; background: #f8fafc; cursor: pointer; font-size: 12px; margin-bottom: 8px; }
 
 /* ===============================================================
-   LAYOUT DO MODAL DE HISTÓRICO (DESIGN MELHORADO v17.6)
+   LAYOUT DO MODAL DE HISTÓRICO
 =============================================================== */
 .analysis-wrapper { 
     display: grid; 
@@ -134,15 +134,15 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x:
 .badge-safe { background: rgba(16,185,129,0.08); color: #047857; }
 .badge-critical { background: rgba(239,68,68,0.08); color: #b91c1c; }
 
-/* Login (CORRIGIDO) */
+/* Login */
 .login-overlay { 
     position: fixed; 
     inset: 0; 
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
-    display: flex; /* Adicionado para centralizar */
-    align-items: center; /* Adicionado para centralizar */
-    justify-content: center; /* Adicionado para centralizar */
-    z-index: 9999; /* Garante que fica na frente de tudo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
 }
 .login-container { background: white; padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; text-align: center; }
 .login-header { margin-bottom: 30px; }
@@ -168,21 +168,6 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x:
 .user-form-inline input, .user-form-inline select { padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; }
 .text-right { text-align: right !important; }
 
-/* Responsividade Mobile */
-@media (max-width: 900px) {
-    .admin-grid { grid-template-columns: 1fr; }
-    .analysis-wrapper { grid-template-columns: 1fr; } /* Stack no mobile */
-    .analysis-sidebar { border-left: none; padding-left: 0; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
-}
-@media (max-width: 768px) {
-    .header-inner { flex-wrap: wrap; gap: 10px; }
-    .nav-tabs { order: 3; width: 100%; justify-content: center; }
-    .header-right { order: 2; }
-    .table-container { border-radius: 12px; }
-    .inventory-table th, .inventory-table td { padding: 10px 8px; }
-    .user-form-inline { grid-template-columns: 1fr; }
-}
-
 /* Modo Escuro (Correção de Contraste) */
 [data-theme="dark"] .row-critical { background: #7f1d1d !important; color: white !important; }
 [data-theme="dark"] .row-critical td { color: white !important; }
@@ -190,3 +175,118 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x:
 [data-theme="dark"] .row-warning { background: #92400e !important; color: white !important; }
 [data-theme="dark"] .row-warning td { color: white !important; }
 [data-theme="dark"] .row-warning td strong { color: #fed7aa !important; }
+
+/* ==========================================================================
+   CSS RESPONSIVO MOBILE - CARD VIEW SYSTEM
+   Transforma tabelas em Cards e ajusta layout para telas < 768px
+========================================================================== */
+@media (max-width: 900px) {
+    .admin-grid { grid-template-columns: 1fr; }
+    .analysis-wrapper { display: flex; flex-direction: column; padding: 20px; } 
+    .analysis-sidebar { border-left: none; padding-left: 0; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
+}
+
+@media (max-width: 768px) {
+    .container { padding: 0 15px; }
+
+    /* Login Mobile */
+    .login-container { width: 90%; padding: 30px 20px; }
+
+    /* Header Mobile */
+    .header-inner { flex-direction: column; gap: 15px; }
+    .logo { align-self: center; margin-bottom: 5px; }
+    .header-right { width: 100%; justify-content: space-between; }
+    .nav-tabs { width: 100%; overflow-x: auto; padding-bottom: 8px; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+    .tab-btn { flex-shrink: 0; white-space: nowrap; }
+    .user-badge { font-size: 0.75rem; padding: 6px 10px; }
+
+    /* Search Bar */
+    .header-tools-modern { flex-direction: column; align-items: stretch; gap: 10px; }
+    .search-wrapper { max-width: 100%; }
+
+    /* --- TRANSFORMAÇÃO DE TABELAS EM CARDS --- */
+    table, thead, tbody, th, td, tr { display: block; }
+    thead tr { position: absolute; top: -9999px; left: -9999px; }
+    
+    tbody tr {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        margin-bottom: 16px;
+        padding: 16px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    }
+
+    td {
+        border: none;
+        position: relative;
+        padding-left: 0;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 13px;
+    }
+    td:last-child { border-bottom: none; }
+
+    /* === Tabela de Estoque (#stock-list) === */
+    /* Foto (Coluna 1) */
+    #stock-list td:nth-of-type(1) { justify-content: center; padding-bottom: 15px; border-bottom: none; }
+    #stock-list td:nth-of-type(1) img { width: 80px; height: 80px; border-radius: 12px; }
+    
+    /* Nome do Produto (Coluna 2) */
+    #stock-list td:nth-of-type(2) { display: block; text-align: center; font-size: 1.1rem; font-weight: 800; color: var(--primary); padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+    
+    /* Categoria (Coluna 3) */
+    #stock-list td:nth-of-type(3)::before { content: "Categoria"; font-weight: 700; color: #64748b; }
+    
+    /* Saldo (Coluna 4) */
+    #stock-list td:nth-of-type(4)::before { content: "Saldo / Mín"; font-weight: 700; color: #64748b; }
+    
+    /* Ações (Coluna 5) */
+    #stock-list td:nth-of-type(5) { display: block; margin-top: 10px; padding-top: 10px; }
+    #stock-list td:nth-of-type(5) > div { justify-content: space-between; width: 100%; display: flex; }
+    
+    /* Botões grandes no mobile */
+    .frame-ops { width: 100%; justify-content: center; margin-bottom: 10px; }
+    .btn-capsule { padding: 10px 20px; font-size: 13px; flex: 1; text-align: center; }
+
+    /* === Tabela de Compras (#shopping-list) === */
+    #shopping-list td:nth-of-type(1) { display: block; text-align: left; font-size: 1.1rem; color: var(--text); font-weight: 800; border-bottom: 1px solid var(--border); margin-bottom: 5px; padding-bottom: 10px; }
+    #shopping-list td:nth-of-type(2)::before { content: "Saldo / Mín"; font-weight: 700; color: #64748b; }
+    #shopping-list td:nth-of-type(3)::before { content: "Consumo (15d)"; font-weight: 700; color: #64748b; }
+    #shopping-list td:nth-of-type(4)::before { content: "Duração Est."; font-weight: 700; color: #64748b; }
+    #shopping-list td:nth-of-type(5)::before { content: "Data Limite"; font-weight: 700; color: #64748b; }
+
+    /* === Tabela de Alertas (#alert-countdown-list) === */
+    #alert-countdown-list td:nth-of-type(1) { display: block; text-align: left; margin-bottom: 5px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    #alert-countdown-list td:nth-of-type(2)::before { content: "Tempo Alerta"; font-weight: 700; color: #64748b; }
+    #alert-countdown-list td:nth-of-type(3) { justify-content: flex-end; }
+
+    /* === Tabela de Histórico (#history-content) === */
+    #history-content td:nth-of-type(1)::before { content: "Data"; font-weight: 700; color: #64748b; }
+    #history-content td:nth-of-type(2)::before { content: "Tipo"; font-weight: 700; color: #64748b; }
+    #history-content td:nth-of-type(3)::before { content: "Qtd"; font-weight: 700; color: #64748b; }
+    #history-content td:nth-of-type(4)::before { content: "Destino"; font-weight: 700; color: #64748b; }
+    #history-content td:nth-of-type(5)::before { content: "Usuário"; font-weight: 700; color: #64748b; }
+
+    /* === Modais === */
+    .modal-card-floating, .modal-card-floating.small, .modal-card-floating.large { 
+        width: 92% !important; 
+        max-width: none; 
+        max-height: 85vh; 
+        display: flex; 
+        flex-direction: column; 
+    }
+    .modal-body-scroll { max-height: 50vh; }
+    
+    /* Formulário de Usuário */
+    .user-form-inline { grid-template-columns: 1fr; gap: 10px; }
+    .user-form-inline button { width: 100%; margin-top: 5px; }
+    
+    /* Gráficos */
+    .chart-box { height: 250px !important; }
+}
